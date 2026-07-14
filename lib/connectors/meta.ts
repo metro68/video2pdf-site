@@ -3,6 +3,7 @@ import type { ConnectorResult } from "@/lib/connectors/types";
 import { getCached, setCached } from "@/lib/cache";
 
 const CACHE_KEY = "connector:meta";
+const GRAPH_VERSION = "v21.0";
 
 function hasCredentials(): boolean {
   return Boolean(process.env.META_ACCESS_TOKEN && process.env.META_AD_ACCOUNT_ID);
@@ -19,7 +20,25 @@ export function normalize(raw: unknown): Metrics {
 }
 
 async function fetchRaw(): Promise<unknown> {
-  throw new Error("meta fetch not yet wired");
+  const token = process.env.META_ACCESS_TOKEN!;
+  // Accept an account id with or without the "act_" prefix.
+  const rawAccount = process.env.META_AD_ACCOUNT_ID!;
+  const account = rawAccount.startsWith("act_") ? rawAccount : `act_${rawAccount}`;
+
+  const params = new URLSearchParams({
+    fields: "spend,impressions,clicks,purchase_roas",
+    date_preset: "last_7d",
+    access_token: token,
+  });
+
+  const res = await fetch(
+    `https://graph.facebook.com/${GRAPH_VERSION}/${account}/insights?${params.toString()}`,
+  );
+
+  if (!res.ok) {
+    throw new Error(`meta fetch failed: ${res.status} ${await res.text()}`);
+  }
+  return res.json();
 }
 
 export async function fetchMetrics(): Promise<ConnectorResult<Metrics>> {

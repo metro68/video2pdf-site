@@ -28,14 +28,16 @@ node -e "console.log(require('bcryptjs').hashSync(process.argv[1], 10))" "yourpa
 
 Auth: `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`, `MARKETING_EMAIL`, `MARKETING_PASSWORD_HASH`.
 
-Connectors (each optional; a missing one shows an "awaiting credentials" card):
+Connectors (each optional; a provider with all its vars set fetches live data, one with any missing shows an "awaiting credentials" card):
 
-- App Store Connect: `APPSTORE_KEY_ID`, `APPSTORE_ISSUER_ID`, `APPSTORE_PRIVATE_KEY`
-- Google Play: `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
-- PostHog: `POSTHOG_API_KEY`, `POSTHOG_HOST`
-- AppsFlyer: `APPSFLYER_API_TOKEN`
+- App Store Connect: `APPSTORE_KEY_ID`, `APPSTORE_ISSUER_ID`, `APPSTORE_PRIVATE_KEY` (full .p8 contents), `APPSTORE_VENDOR_NUMBER`
+- Google Play: `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (full service-account JSON), `GOOGLE_PLAY_PACKAGE_NAME`
+- PostHog: `POSTHOG_API_KEY` (personal API key), `POSTHOG_HOST`, `POSTHOG_PROJECT_ID`
+- AppsFlyer: `APPSFLYER_API_TOKEN`, `APPSFLYER_APP_ID`
 - Meta: `META_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID`
 - TikTok: `TIKTOK_ACCESS_TOKEN`, `TIKTOK_ADVERTISER_ID`
+
+Each connector fetches a 7-day window, caches the result for one hour, and normalizes it to the shared metric shape. If a provider's API call fails, its card shows an error with the provider's message rather than fake data.
 
 ## Roles
 

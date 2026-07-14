@@ -13,6 +13,7 @@ beforeAll(() => {
   process.env.APPSTORE_KEY_ID = "x";
   process.env.APPSTORE_ISSUER_ID = "x";
   process.env.APPSTORE_PRIVATE_KEY = "x";
+  process.env.APPSTORE_VENDOR_NUMBER = "x";
 });
 
 beforeEach(() => {

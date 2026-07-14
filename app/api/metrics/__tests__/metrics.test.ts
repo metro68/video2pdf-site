@@ -26,6 +26,7 @@ describe("metrics route redaction", () => {
     process.env.APPSTORE_KEY_ID = "x";
     process.env.APPSTORE_ISSUER_ID = "x";
     process.env.APPSTORE_PRIVATE_KEY = "x";
+    process.env.APPSTORE_VENDOR_NUMBER = "x";
     setCached("connector:appstore", { downloads: 10, mrr: 500, arr: 6000 });
     const res = await getWithRole(GET, "marketing");
     const json = await res.json();
@@ -40,6 +41,7 @@ describe("metrics route redaction", () => {
     process.env.APPSTORE_KEY_ID = "x";
     process.env.APPSTORE_ISSUER_ID = "x";
     process.env.APPSTORE_PRIVATE_KEY = "x";
+    process.env.APPSTORE_VENDOR_NUMBER = "x";
     setCached("connector:appstore", { downloads: 10, mrr: 500, arr: 6000 });
     const res = await getWithRole(GET, "admin");
     const json = await res.json();

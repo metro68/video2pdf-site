@@ -5,7 +5,7 @@ import { getCached, setCached } from "@/lib/cache";
 const CACHE_KEY = "connector:posthog";
 
 function hasCredentials(): boolean {
-  return Boolean(process.env.POSTHOG_API_KEY && process.env.POSTHOG_HOST);
+  return Boolean(process.env.POSTHOG_API_KEY && process.env.POSTHOG_HOST && process.env.POSTHOG_PROJECT_ID);
 }
 
 export function normalize(raw: unknown): Metrics {
@@ -16,7 +16,30 @@ export function normalize(raw: unknown): Metrics {
 }
 
 async function fetchRaw(): Promise<unknown> {
-  throw new Error("posthog fetch not yet wired");
+  const host = process.env.POSTHOG_HOST!.replace(/\/$/, "");
+  const projectId = process.env.POSTHOG_PROJECT_ID!;
+  const apiKey = process.env.POSTHOG_API_KEY!;
+
+  // Daily active users over the last 7 days via the Trends insight endpoint.
+  const body = {
+    events: [{ id: "$pageview", math: "dau" }],
+    date_from: "-7d",
+    interval: "day",
+  };
+
+  const res = await fetch(`${host}/api/projects/${projectId}/insights/trend/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    throw new Error(`posthog fetch failed: ${res.status} ${await res.text()}`);
+  }
+  return res.json();
 }
 
 export async function fetchMetrics(): Promise<ConnectorResult<Metrics>> {
