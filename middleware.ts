@@ -20,5 +20,6 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 }
 
 export const config = {
+  runtime: "nodejs",
   matcher: ["/dashboard/:path*", "/api/metrics/:path*"],
 };
