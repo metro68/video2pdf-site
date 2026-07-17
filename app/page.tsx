@@ -739,6 +739,7 @@ export default function HomePage() {
           <div className="footer-links">
             <a href="/privacy">Privacy Policy</a>
             <a href="/terms">Terms of Service</a>
+            <a href="/delete-account">Delete Your Data</a>
             <a href="mailto:support@video2pdf.ai">Support</a>
           </div>
           <p className="footer-copy">© 2026 Video2PDF. All rights reserved.</p>
