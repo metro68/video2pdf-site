@@ -1,13 +1,12 @@
 import bcrypt from "bcryptjs";
-import { SignJWT, jwtVerify } from "jose";
 import type { Role } from "@/lib/types";
+import type { SessionPayload } from "@/lib/session";
 
-export const SESSION_COOKIE = "v2p_session";
-
-export interface SessionPayload {
-  email: string;
-  role: Role;
-}
+// Re-export the Edge-safe session pieces so existing importers of "@/lib/auth"
+// keep working. bcrypt (Node-only) stays here; anything that must run on the
+// Edge runtime (middleware) should import from "@/lib/session" directly.
+export { SESSION_COOKIE, signSession, verifySession } from "@/lib/session";
+export type { SessionPayload } from "@/lib/session";
 
 interface SeededUser {
   email: string | undefined;
@@ -22,37 +21,10 @@ function seededUsers(): SeededUser[] {
   ];
 }
 
-function secretKey(): Uint8Array {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error("JWT_SECRET is not set");
-  return new TextEncoder().encode(secret);
-}
-
 export async function verifyCredentials(email: string, password: string): Promise<SessionPayload | null> {
   const user = seededUsers().find((u) => u.email && u.email.toLowerCase() === email.toLowerCase());
   if (!user || !user.hash) return null;
   const ok = await bcrypt.compare(password, user.hash);
   if (!ok) return null;
   return { email: user.email as string, role: user.role };
-}
-
-export async function signSession(payload: SessionPayload): Promise<string> {
-  return new SignJWT({ email: payload.email, role: payload.role })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("7d")
-    .sign(secretKey());
-}
-
-export async function verifySession(token: string): Promise<SessionPayload | null> {
-  try {
-    const { payload } = await jwtVerify(token, secretKey());
-    const email = payload.email;
-    const role = payload.role;
-    if (typeof email !== "string") return null;
-    if (role !== "admin" && role !== "marketing") return null;
-    return { email, role };
-  } catch {
-    return null;
-  }
 }
