@@ -4,8 +4,15 @@ import { getCached, setCached } from "@/lib/cache";
 
 const CACHE_KEY = "connector:appsflyer";
 
+function appIds(): string[] {
+  // One AppsFlyer app per platform. Either may be absent before a platform launches.
+  return [process.env.APPSFLYER_IOS_APP_ID, process.env.APPSFLYER_ANDROID_APP_ID].filter(
+    (id): id is string => Boolean(id),
+  );
+}
+
 function hasCredentials(): boolean {
-  return Boolean(process.env.APPSFLYER_API_TOKEN && process.env.APPSFLYER_APP_ID);
+  return Boolean(process.env.APPSFLYER_API_TOKEN) && appIds().length > 0;
 }
 
 export function normalize(raw: unknown): Metrics {
@@ -41,11 +48,8 @@ function parseAggregateCsv(csv: string): { installs: number; cost: number } {
   return { installs, cost };
 }
 
-async function fetchRaw(): Promise<unknown> {
+async function fetchApp(appId: string, from: string, to: string): Promise<{ installs: number; cost: number }> {
   const token = process.env.APPSFLYER_API_TOKEN!;
-  const appId = process.env.APPSFLYER_APP_ID!;
-  const { from, to } = last7DaysRange();
-
   const params = new URLSearchParams({ from, to });
   const res = await fetch(
     `https://hq1.appsflyer.com/api/agg-data/export/app/${appId}/partners_report/v5?${params.toString()}`,
@@ -53,10 +57,18 @@ async function fetchRaw(): Promise<unknown> {
   );
 
   if (!res.ok) {
-    throw new Error(`appsflyer fetch failed: ${res.status} ${await res.text()}`);
+    throw new Error(`appsflyer fetch failed for ${appId}: ${res.status} ${await res.text()}`);
   }
-  const csv = await res.text();
-  return parseAggregateCsv(csv);
+  return parseAggregateCsv(await res.text());
+}
+
+async function fetchRaw(): Promise<unknown> {
+  const { from, to } = last7DaysRange();
+  const results = await Promise.all(appIds().map((id) => fetchApp(id, from, to)));
+  return results.reduce(
+    (acc, r) => ({ installs: acc.installs + r.installs, cost: acc.cost + r.cost }),
+    { installs: 0, cost: 0 },
+  );
 }
 
 export async function fetchMetrics(): Promise<ConnectorResult<Metrics>> {
