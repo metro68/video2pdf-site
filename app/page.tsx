@@ -145,42 +145,32 @@ export default function HomePage() {
           gap: 16px;
           flex-wrap: wrap;
         }
-        .store-btn {
+        .get-app-btn {
           display: inline-flex;
           align-items: center;
-          gap: 12px;
-          background: var(--bg-card);
-          border: 1px solid var(--border);
+          justify-content: center;
+          background: linear-gradient(135deg, var(--primary), var(--primary-light));
           border-radius: 14px;
-          padding: 14px 28px;
-          color: var(--text);
+          padding: 16px 44px;
+          color: #fff;
+          font-size: 17px;
+          font-weight: 700;
           text-decoration: none;
-          transition: all 0.2s;
+          transition: transform 0.2s, box-shadow 0.2s;
           cursor: pointer;
+          box-shadow: 0 4px 16px rgba(13, 148, 136, 0.25);
         }
-        .store-btn:hover {
-          border-color: var(--primary);
+        .get-app-btn:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(13, 148, 136, 0.15);
+          box-shadow: 0 8px 28px rgba(13, 148, 136, 0.4);
         }
-        .store-btn svg {
-          width: 28px;
-          height: 28px;
-          fill: var(--text);
-        }
-        .store-btn-text {
-          text-align: left;
-        }
-        .store-btn-text small {
-          font-size: 11px;
+        .platform-note {
+          margin-top: 14px;
+          font-size: 14px;
           color: var(--text-secondary);
-          display: block;
-        }
-        .store-btn-text strong {
-          font-size: 16px;
         }
         .hero-note {
-          margin-top: 18px;
+          margin-top: 8px;
           font-size: 13px;
           color: var(--text-secondary);
         }
@@ -525,7 +515,7 @@ export default function HomePage() {
             flex-direction: column;
             align-items: center;
           }
-          .store-btn {
+          .get-app-btn {
             width: 100%;
             max-width: 300px;
             justify-content: center;
@@ -543,7 +533,7 @@ export default function HomePage() {
             <a href="#how-it-works">How It Works</a>
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
-            <a href="https://apps.apple.com/us/app/video2pdf/id6761927204" className="nav-cta">
+            <a href="https://video2pdf.onelink.me/sWaT/xqzyhwkx" className="nav-cta">
               Get the App
             </a>
           </div>
@@ -564,19 +554,14 @@ export default function HomePage() {
             </p>
             <div className="store-buttons">
               <a
-                href="https://apps.apple.com/us/app/video2pdf/id6761927204"
-                className="store-btn"
-                id="app-store-link"
+                href="https://video2pdf.onelink.me/sWaT/xqzyhwkx"
+                className="get-app-btn"
+                id="get-app-link"
               >
-                <svg viewBox="0 0 24 24">
-                  <path d="M18.71 19.5C17.88 20.74 17 21.95 15.66 21.97C14.32 22 13.89 21.18 12.37 21.18C10.84 21.18 10.37 21.95 9.1 22C7.79 22.05 6.8 20.68 5.96 19.47C4.25 16.56 2.93 11.3 4.7 7.72C5.57 5.94 7.36 4.86 9.28 4.84C10.56 4.81 11.78 5.72 12.58 5.72C13.38 5.72 14.87 4.62 16.42 4.8C17.07 4.83 18.89 5.06 20.05 6.72C19.95 6.78 17.61 8.13 17.64 10.94C17.67 14.31 20.63 15.41 20.66 15.42C20.63 15.5 20.18 17.07 19.06 18.67L18.71 19.5ZM13 3.5C13.73 2.67 14.94 2.04 15.94 2C16.07 3.17 15.6 4.35 14.9 5.19C14.21 6.04 13.07 6.7 11.95 6.61C11.8 5.46 12.36 4.26 13 3.5Z" />
-                </svg>
-                <div className="store-btn-text">
-                  <small>Download on the</small>
-                  <strong>App Store</strong>
-                </div>
+                Get the App
               </a>
             </div>
+            <p className="platform-note">Free on iPhone and Android</p>
             <p className="hero-note">Free for 3 days, then $29.99/year. Cancel anytime.</p>
           </div>
           <div className="hero-art">
@@ -734,7 +719,7 @@ export default function HomePage() {
               <li>No watermarks</li>
               <li>Private on-device processing</li>
             </ul>
-            <a href="https://apps.apple.com/us/app/video2pdf/id6761927204" className="cta-btn">
+            <a href="https://video2pdf.onelink.me/sWaT/xqzyhwkx" className="cta-btn">
               Start Your Free Trial
             </a>
             <p className="pricing-fine">
