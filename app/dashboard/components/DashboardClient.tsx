@@ -108,19 +108,21 @@ export default function DashboardClient({ role }: { role: Role }) {
             <div>
               <h1 className="text-xl font-bold text-brand-primary">Video2PDF Analytics</h1>
               <p className="text-xs text-brand-text-secondary">
-                Each figure links to its source. Store and subscription numbers lag ~1&ndash;2 days.
+                Each figure links to its source. Store and subscription numbers lag ~1&ndash;2 days; past months refresh daily.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <input
-              type="month"
-              value={month}
-              max={currentYm}
-              onChange={(e) => e.target.value && setMonth(e.target.value)}
-              className="rounded-lg bg-brand-bg-card border border-brand-border px-3 py-1.5 text-sm text-brand-text"
-              aria-label="Month"
-            />
+            <label className="flex items-center gap-2 text-sm text-brand-text-secondary">
+              Showing month
+              <input
+                type="month"
+                value={month}
+                max={currentYm}
+                onChange={(e) => e.target.value && setMonth(e.target.value)}
+                className="rounded-lg bg-brand-bg-card border border-brand-border px-3 py-1.5 text-sm text-brand-text"
+              />
+            </label>
             <button onClick={onSignOut} className="text-sm text-brand-text-secondary underline">
               Sign out
             </button>
@@ -131,7 +133,11 @@ export default function DashboardClient({ role }: { role: Role }) {
           <KpiTile
             label={`New downloads (${monthLabel})`}
             value={downloads.toLocaleString()}
-            description={`First-time installs in ${monthLabel}, App Store + Google Play combined. Excludes updates, re-downloads, and in-app purchases. Current month lags 1-2 days behind.`}
+            description={
+              isCurrentMonth
+                ? `First-time installs in ${monthLabel} so far, App Store + Google Play combined. Excludes updates, re-downloads, and in-app purchases. Lags 1-2 days behind.`
+                : `First-time installs in ${monthLabel}, App Store + Google Play combined. Excludes updates, re-downloads, and in-app purchases. A just-ended month can under-report until Apple publishes its monthly report (~5 days into the next month).`
+            }
             sources={[CONSOLE.appstore, CONSOLE.play]}
           />
           <KpiTile
@@ -160,7 +166,7 @@ export default function DashboardClient({ role }: { role: Role }) {
             <KpiTile
               label="MRR"
               value={subsKnown ? `$${mrr.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "n/a"}
-              description={`Monthly recurring revenue = active paid subscribers x $29.99/12 (US list price; other storefronts price differently, so this is an approximation). ${isCurrentMonth ? "Live snapshot." : `As of the end of ${monthLabel}.`} Cancelled-but-not-lapsed subscribers are included; refunds are not.`}
+              description={`Monthly recurring revenue = active paid subscribers x $29.99/12 (US list price; other storefronts price differently, so this is an approximation). ${isCurrentMonth ? "Live snapshot." : `As of the end of ${monthLabel}; months older than ~30 days show n/a because Apple no longer retains the daily snapshot.`} Cancelled-but-not-lapsed subscribers are included; refunds are not.`}
               sources={[CONSOLE.appstore, CONSOLE.play]}
             />
           ) : null}
