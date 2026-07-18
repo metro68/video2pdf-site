@@ -61,7 +61,7 @@ export default function PrivacyPage() {
           ← Back to Video2PDF
         </a>
         <h1>Privacy Policy</h1>
-        <p className="updated">Last updated: July 7, 2026</p>
+        <p className="updated">Last updated: July 18, 2026</p>
 
         <p>
           Video2PDF ("we", "our", or "us") is committed to protecting your privacy. This Privacy
@@ -97,10 +97,10 @@ export default function PrivacyPage() {
           <li>
             <strong>Usage &amp; Product Analytics:</strong> We collect events describing how the app
             is used (for example, screens viewed, scans started, exports completed, and subscription
-            steps) to understand our conversion funnel and improve the product. This includes session
-            recordings that capture how you navigate the app so we can diagnose problems. Session
-            recordings mask on-screen text and images by default, and the camera preview and your
-            scanned pages are always excluded from recording.
+            steps) to understand our conversion funnel and improve the product. This includes
+            session recordings that capture how you navigate the app so we can diagnose problems.
+            Session recordings mask on-screen text and images by default, so your scanned pages and
+            other content are not visible in them.
           </li>
           <li>
             <strong>Crash Data:</strong> We collect crash reports and related diagnostic information
@@ -141,8 +141,8 @@ export default function PrivacyPage() {
         <p>Video2PDF integrates with:</p>
         <ul>
           <li>Apple App Store / Google Play Store: subscription management</li>
-          <li>Sentry: crash reporting and diagnostics</li>
-          <li>PostHog: product analytics and session recording</li>
+          <li>Sentry: crash reporting, diagnostics, and session recording</li>
+          <li>PostHog: product analytics</li>
           <li>AppsFlyer: advertising attribution and measurement</li>
           <li>
             Meta (Facebook): advertising attribution and measurement for Facebook and Instagram
