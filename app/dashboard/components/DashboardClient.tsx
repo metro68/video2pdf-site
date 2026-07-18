@@ -82,11 +82,18 @@ export default function DashboardClient({ role }: { role: Role }) {
     <main className="min-h-screen bg-brand-bg text-brand-text p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <header className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-brand-primary">Analytics</h1>
-            <p className="text-xs text-brand-text-secondary">
-              Each figure links to its source. Store and subscription numbers lag ~1&ndash;2 days.
-            </p>
+          <div className="flex items-center gap-3">
+            <img
+              src="/assets/icon.png"
+              alt="Video2PDF"
+              className="h-10 w-10 rounded-lg"
+            />
+            <div>
+              <h1 className="text-xl font-bold text-brand-primary">Video2PDF Analytics</h1>
+              <p className="text-xs text-brand-text-secondary">
+                Each figure links to its source. Store and subscription numbers lag ~1&ndash;2 days.
+              </p>
+            </div>
           </div>
           <button onClick={onSignOut} className="text-sm text-brand-text-secondary underline">
             Sign out

@@ -58,6 +58,11 @@ export default function TermsPage() {
 
       <div className="container legal">
         <a className="back" href="/">
+          <img
+            src="/assets/icon.png"
+            alt=""
+            style={{ width: 24, height: 24, borderRadius: 6, verticalAlign: "middle", marginRight: 8 }}
+          />
           ← Back to Video2PDF
         </a>
         <h1>Terms of Service</h1>
