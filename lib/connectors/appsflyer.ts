@@ -79,7 +79,9 @@ export async function fetchMetrics(): Promise<ConnectorResult<Metrics>> {
   if (cached) return { data: cached.value, asOf: cached.asOf, status: "ok" };
   try {
     const data = normalize(await fetchRaw());
-    const asOf = setCached(CACHE_KEY, data);
+    // AppsFlyer quota for 3+ day ranges is 24 calls/day per app; a 6h TTL
+    // keeps us at ~4/day/app even across deploy restarts (doc-verified).
+    const asOf = setCached(CACHE_KEY, data, 6 * 60 * 60 * 1000);
     return { data, asOf, status: "ok" };
   } catch (e) {
     return { data: null, asOf: null, status: "error", error: (e as Error).message };
