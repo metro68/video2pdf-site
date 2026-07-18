@@ -2,6 +2,7 @@ import { importPKCS8, SignJWT } from "jose";
 import type { Metrics } from "@/lib/types";
 import type { ConnectorResult } from "@/lib/connectors/types";
 import { getCached, setCached } from "@/lib/cache";
+import { mrrFromSubs, arrFromMrr } from "@/lib/pricing";
 
 const CACHE_KEY = "connector:play";
 const SCOPE = "https://www.googleapis.com/auth/playdeveloperreporting";
@@ -11,17 +12,24 @@ interface ServiceAccount {
   private_key: string;
 }
 
+interface PlayRaw {
+  installs: number;
+  paidSubs: number;
+}
+
 function hasCredentials(): boolean {
   return Boolean(process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON && process.env.GOOGLE_PLAY_PACKAGE_NAME);
 }
 
 export function normalize(raw: unknown): Metrics {
-  const r = raw as { installs?: number; revenue?: number; paidSubs?: number } | null;
+  const r = raw as PlayRaw | null;
+  const paidSubs = r?.paidSubs ?? 0;
+  const mrr = mrrFromSubs(paidSubs);
   return {
     downloads: r?.installs ?? 0,
-    paidSubs: r?.paidSubs ?? 0,
-    mrr: r?.revenue ?? 0,
-    arr: r?.revenue ? r.revenue * 12 : 0,
+    paidSubs,
+    mrr,
+    arr: arrFromMrr(mrr),
   };
 }
 
@@ -62,54 +70,84 @@ async function accessToken(sa: ServiceAccount): Promise<string> {
   return json.access_token;
 }
 
-// Sum the aggregated install rows returned by the Play Developer Reporting API.
-function sumInstalls(raw: unknown): { installs: number } {
-  const rows = (raw as { rows?: Array<{ metrics?: Array<{ decimalValue?: { value?: string } }> }> } | null)?.rows ?? [];
-  let installs = 0;
-  for (const row of rows) {
-    const v = row.metrics?.[0]?.decimalValue?.value;
-    if (v != null) installs += Number(v) || 0;
-  }
-  return { installs };
+interface MetricRow {
+  metrics?: Array<{ decimalValue?: { value?: string }; integerValue?: string }>;
 }
 
-async function fetchRaw(): Promise<unknown> {
+function rowValue(row: MetricRow | undefined): number {
+  const m = row?.metrics?.[0];
+  const v = m?.decimalValue?.value ?? m?.integerValue;
+  return v != null ? Number(v) || 0 : 0;
+}
+
+// Read the last row of a Reporting API timeline. For a flow metric (new installs)
+// this is the most recent complete day; for a snapshot metric (active subs) it is
+// the current value. Never sum a snapshot across days.
+export function lastRowValue(raw: unknown): number {
+  const rows = (raw as { rows?: MetricRow[] } | null)?.rows ?? [];
+  if (rows.length === 0) return 0;
+  return rowValue(rows[rows.length - 1]);
+}
+
+function timelineBody(metrics: string[]) {
+  // 8-day window ending yesterday so the last bucket is a complete day.
+  const dayMs = 24 * 60 * 60 * 1000;
+  const end = new Date(Date.now() - dayMs);
+  const start = new Date(end.getTime() - 7 * dayMs);
+  const ymd = (d: Date) => ({
+    year: d.getUTCFullYear(),
+    month: d.getUTCMonth() + 1,
+    day: d.getUTCDate(),
+  });
+  return {
+    timelineSpec: {
+      aggregationPeriod: "DAILY",
+      startTime: ymd(start),
+      endTime: ymd(end),
+    },
+    metrics,
+  };
+}
+
+async function queryMetricSet(
+  token: string,
+  pkg: string,
+  metricSet: string,
+  metrics: string[],
+): Promise<unknown> {
+  const res = await fetch(
+    `https://playdeveloperreporting.googleapis.com/v1beta1/apps/${pkg}/${metricSet}:query`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(timelineBody(metrics)),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`play ${metricSet} failed: ${res.status} ${await res.text()}`);
+  }
+  return res.json();
+}
+
+async function fetchRaw(): Promise<PlayRaw> {
   const sa = serviceAccount();
   const token = await accessToken(sa);
   const pkg = process.env.GOOGLE_PLAY_PACKAGE_NAME!;
 
-  const now = new Date();
-  const from = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
-  const body = {
-    timelineSpec: {
-      aggregationPeriod: "DAILY",
-      startTime: {
-        year: from.getUTCFullYear(),
-        month: from.getUTCMonth() + 1,
-        day: from.getUTCDate(),
-      },
-      endTime: {
-        year: now.getUTCFullYear(),
-        month: now.getUTCMonth() + 1,
-        day: now.getUTCDate(),
-      },
-    },
-    metrics: ["activeDeviceInstalls"],
+  // Downloads: new install events per day (a flow), last complete day.
+  const installsData = await queryMetricSet(token, pkg, "installsMetricSet", [
+    "newDeviceInstalls",
+  ]);
+
+  // Active paid subscribers: current active subscription count (a snapshot).
+  const subsData = await queryMetricSet(token, pkg, "subscriptionsMetricSet", [
+    "activeSubscriptions",
+  ]);
+
+  return {
+    installs: lastRowValue(installsData),
+    paidSubs: lastRowValue(subsData),
   };
-
-  const res = await fetch(
-    `https://playdeveloperreporting.googleapis.com/v1beta1/apps/${pkg}/installsMetricSet:query`,
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    },
-  );
-
-  if (!res.ok) {
-    throw new Error(`play fetch failed: ${res.status} ${await res.text()}`);
-  }
-  return sumInstalls(await res.json());
 }
 
 export async function fetchMetrics(): Promise<ConnectorResult<Metrics>> {

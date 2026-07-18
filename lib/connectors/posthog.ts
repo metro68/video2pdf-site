@@ -11,6 +11,7 @@ function hasCredentials(): boolean {
 export function normalize(raw: unknown): Metrics {
   const r = raw as { result?: Array<{ data?: number[]; count?: number }> } | null;
   const series = r?.result?.[0]?.data ?? [];
+  // The query ends at yesterday, so the last bucket is a complete day.
   const dau = series.length ? series[series.length - 1] : 0;
   return { dau };
 }
@@ -20,10 +21,15 @@ async function fetchRaw(): Promise<unknown> {
   const projectId = process.env.POSTHOG_PROJECT_ID!;
   const apiKey = process.env.POSTHOG_API_KEY!;
 
-  // Daily active users over the last 7 days via the Trends insight endpoint.
+  // Daily active users = distinct users who fired ANY event that day. Using the
+  // catch-all event (id: null) counts every active user, not just those who hit
+  // one specific event. The mobile app does not emit "$pageview" (a web-only
+  // event), so scoping to any event is what actually measures app DAU.
+  // The window ends yesterday so the last bucket is a complete day.
   const body = {
-    events: [{ id: "$pageview", math: "dau" }],
-    date_from: "-7d",
+    events: [{ id: null, type: "events", math: "dau" }],
+    date_from: "-8d",
+    date_to: "-1d",
     interval: "day",
   };
 
