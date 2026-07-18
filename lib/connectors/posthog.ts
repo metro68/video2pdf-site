@@ -9,8 +9,8 @@ function hasCredentials(): boolean {
 }
 
 export function normalize(raw: unknown): Metrics {
-  const r = raw as { result?: Array<{ data?: number[]; count?: number }> } | null;
-  const series = r?.result?.[0]?.data ?? [];
+  const r = raw as { results?: Array<{ data?: number[] }> } | null;
+  const series = r?.results?.[0]?.data ?? [];
   // The query ends at yesterday, so the last bucket is a complete day.
   const dau = series.length ? series[series.length - 1] : 0;
   return { dau };
@@ -21,19 +21,22 @@ async function fetchRaw(): Promise<unknown> {
   const projectId = process.env.POSTHOG_PROJECT_ID!;
   const apiKey = process.env.POSTHOG_API_KEY!;
 
-  // Daily active users = distinct users who fired ANY event that day. Using the
-  // catch-all event (id: null) counts every active user, not just those who hit
-  // one specific event. The mobile app does not emit "$pageview" (a web-only
-  // event), so scoping to any event is what actually measures app DAU.
-  // The window ends yesterday so the last bucket is a complete day.
+  // Daily active users = distinct users who fired ANY event that day, via the
+  // modern /query endpoint (the legacy /insights/trend/ endpoint returns 403
+  // "Legacy insight endpoints are not available" — verified live). EventsNode
+  // with event: null is the catch-all "All events" series; math: "dau" counts
+  // distinct users. The window ends yesterday so the last bucket is a complete
+  // day. Response shape (verified live): { results: [{ data: number[], days: [...] }] }.
   const body = {
-    events: [{ id: null, type: "events", math: "dau" }],
-    date_from: "-8d",
-    date_to: "-1d",
-    interval: "day",
+    query: {
+      kind: "TrendsQuery",
+      series: [{ kind: "EventsNode", event: null, math: "dau" }],
+      dateRange: { date_from: "-8d", date_to: "-1d" },
+      interval: "day",
+    },
   };
 
-  const res = await fetch(`${host}/api/projects/${projectId}/insights/trend/`, {
+  const res = await fetch(`${host}/api/projects/${projectId}/query/`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,

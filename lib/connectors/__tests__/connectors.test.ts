@@ -7,7 +7,7 @@ import * as meta from "@/lib/connectors/meta";
 
 const ALL_ENV = [
   "APPSTORE_KEY_ID", "APPSTORE_ISSUER_ID", "APPSTORE_PRIVATE_KEY", "APPSTORE_VENDOR_NUMBER",
-  "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON", "GOOGLE_PLAY_PACKAGE_NAME",
+  "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON", "GOOGLE_PLAY_PACKAGE_NAME", "GOOGLE_PLAY_STATS_BUCKET",
   "POSTHOG_API_KEY", "POSTHOG_HOST", "POSTHOG_PROJECT_ID",
   "APPSFLYER_API_TOKEN", "APPSFLYER_IOS_APP_ID", "APPSFLYER_ANDROID_APP_ID",
   "META_ACCESS_TOKEN", "META_AD_ACCOUNT_ID",
@@ -41,8 +41,8 @@ describe("connectors: normalize", () => {
     expect(m.roas).toBeCloseTo(3.2);
   });
 
-  it("posthog.normalize maps dau from a trends result", () => {
-    const raw = { result: [{ data: [10, 20, 30], count: 60 }] };
+  it("posthog.normalize maps dau from the last complete day of a query result", () => {
+    const raw = { results: [{ data: [10, 20, 30] }] };
     const m = posthog.normalize(raw);
     expect(m.dau).toBe(30);
   });

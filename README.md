@@ -31,7 +31,7 @@ Auth: `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`, `MARKETING_EMAIL`, `MA
 Connectors (each optional; a provider with all its vars set fetches live data, one with any missing shows an "awaiting credentials" card):
 
 - App Store Connect: `APPSTORE_KEY_ID`, `APPSTORE_ISSUER_ID`, `APPSTORE_PRIVATE_KEY` (full .p8 contents), `APPSTORE_VENDOR_NUMBER`
-- Google Play: `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (full service-account JSON), `GOOGLE_PLAY_PACKAGE_NAME`
+- Google Play: `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (full service-account JSON), `GOOGLE_PLAY_PACKAGE_NAME`, `GOOGLE_PLAY_STATS_BUCKET` (the pubsite_prod_rev bucket from Play Console > Download reports), `GOOGLE_PLAY_SUBSCRIPTION_PRODUCT_ID`. Install and subscriber stats come from the Play Console CSV exports in Cloud Storage; the service account needs bulk-report download access.
 - PostHog: `POSTHOG_API_KEY` (personal API key), `POSTHOG_HOST`, `POSTHOG_PROJECT_ID`
 - AppsFlyer: `APPSFLYER_API_TOKEN`, `APPSFLYER_IOS_APP_ID`, `APPSFLYER_ANDROID_APP_ID` (summed across platforms)
 - Meta: `META_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID`

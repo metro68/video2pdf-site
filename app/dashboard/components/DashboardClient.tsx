@@ -102,9 +102,9 @@ export default function DashboardClient({ role }: { role: Role }) {
 
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <KpiTile
-            label="New downloads"
+            label="New downloads (30 days)"
             value={downloads.toLocaleString()}
-            description="First-time installs on the most recent reported day, App Store + Google Play combined. Not total installs; new installs only. Lags 1-2 days."
+            description="First-time installs over the last 30 reported days, App Store + Google Play combined. Excludes updates, re-downloads, and in-app purchases. Lags 1-2 days."
             sources={[CONSOLE.appstore, CONSOLE.play]}
           />
           <KpiTile
@@ -129,7 +129,7 @@ export default function DashboardClient({ role }: { role: Role }) {
             <KpiTile
               label="MRR"
               value={`$${mrr.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-              description="Monthly recurring revenue = active paid subscribers x $29.99/12. Cancelled-but-not-lapsed subscribers are included; refunds are not."
+              description="Monthly recurring revenue = active paid subscribers x $29.99/12 (US list price; other storefronts price differently, so this is an approximation). Cancelled-but-not-lapsed subscribers are included; refunds are not."
               sources={[CONSOLE.appstore, CONSOLE.play]}
             />
           ) : null}

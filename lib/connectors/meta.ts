@@ -3,7 +3,10 @@ import type { ConnectorResult } from "@/lib/connectors/types";
 import { getCached, setCached } from "@/lib/cache";
 
 const CACHE_KEY = "connector:meta";
-const GRAPH_VERSION = "v21.0";
+// Marketing API versions expire ~yearly; v21.0 expired Sep 2025 (expired
+// versions silently fall back to the oldest live one). v25.0 is current as of
+// 2026-07. Bump when Meta releases new versions.
+const GRAPH_VERSION = "v25.0";
 
 function hasCredentials(): boolean {
   return Boolean(process.env.META_ACCESS_TOKEN && process.env.META_AD_ACCOUNT_ID);

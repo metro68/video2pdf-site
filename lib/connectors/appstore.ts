@@ -50,12 +50,13 @@ async function appStoreToken(): Promise<string> {
     .sign(key);
 }
 
-// Sales report: count only true first-time app downloads. Apple's SALES SUMMARY
-// tags each row with a Product Type Identifier; "1" and "1F" are first installs
-// (paid / free app), "1T"/"1E" etc. are updates, "IA*"/"IAY" are in-app purchases
-// and subscriptions. We sum Units only for the first-install rows so "downloads"
-// is real installs, not installs+IAP+renewals.
-const FIRST_INSTALL_TYPES = new Set(["1", "1F", "1T", "F1"]);
+// Sales report: count only true first-time app downloads. Verified against
+// Apple's product-type-identifiers reference and our live report data:
+// 1 / 1F / 1T are first-time installs (free or paid; 1F is what our universal
+// free app produces), 1E* are custom-app variants, 3* are re-downloads, 7* are
+// updates, and IA*/IAY are in-app purchases and subscription renewals. Only
+// first-install rows count as downloads.
+const FIRST_INSTALL_TYPES = new Set(["1", "1F", "1T", "1E", "1EP", "1EU"]);
 
 export function parseSalesDownloads(tsv: string): number {
   const lines = tsv.trim().split(/\r?\n/);
@@ -116,31 +117,46 @@ async function fetchReport(
   return gunzipSync(buf).toString("utf8");
 }
 
+// Rolling window for the downloads tile. Daily sales reports lag ~2 days, so
+// the window is days 2..31 back: the 30 most recent reportable days.
+const DOWNLOAD_WINDOW_DAYS = 30;
+const REPORT_LAG_DAYS = 2;
+
 async function fetchRaw(): Promise<AppStoreRaw> {
   const token = await appStoreToken();
   const vendorNumber = process.env.APPSTORE_VENDOR_NUMBER!;
 
-  // Downloads: daily SALES summary, 2 days back (reports lag ~a day or two).
-  const salesTsv = await fetchReport(token, {
-    "filter[frequency]": "DAILY",
-    "filter[reportType]": "SALES",
-    "filter[reportSubType]": "SUMMARY",
-    "filter[vendorNumber]": vendorNumber,
-    "filter[reportDate]": daysAgo(2),
-  });
+  // Downloads: sum first-time installs across the last 30 reportable days.
+  // A missing day (Apple 404s dates with no data or not-yet-ready reports)
+  // counts as zero rather than failing the whole metric.
+  const dailyTotals = await Promise.all(
+    Array.from({ length: DOWNLOAD_WINDOW_DAYS }, (_, i) =>
+      fetchReport(token, {
+        "filter[frequency]": "DAILY",
+        "filter[reportType]": "SALES",
+        "filter[reportSubType]": "SUMMARY",
+        "filter[vendorNumber]": vendorNumber,
+        "filter[reportDate]": daysAgo(REPORT_LAG_DAYS + i),
+      })
+        .then(parseSalesDownloads)
+        .catch(() => 0),
+    ),
+  );
+  const downloads = dailyTotals.reduce((sum, n) => sum + n, 0);
 
-  // Active subscribers: daily SUBSCRIPTION summary (state snapshot), 2 days back.
+  // Active subscribers: daily SUBSCRIPTION summary (state snapshot), 2 days
+  // back. Version 1_4 verified working against the live API.
   const subTsv = await fetchReport(token, {
     "filter[frequency]": "DAILY",
     "filter[reportType]": "SUBSCRIPTION",
     "filter[reportSubType]": "SUMMARY",
     "filter[vendorNumber]": vendorNumber,
     "filter[version]": "1_4",
-    "filter[reportDate]": daysAgo(2),
+    "filter[reportDate]": daysAgo(REPORT_LAG_DAYS),
   });
 
   return {
-    downloads: parseSalesDownloads(salesTsv),
+    downloads,
     paidSubs: parseActiveSubscribers(subTsv),
   };
 }
