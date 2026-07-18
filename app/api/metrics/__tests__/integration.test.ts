@@ -18,7 +18,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   clearCache();
-  setCached("connector:appstore", { downloads: 42, mrr: 999, arr: 11988 });
+  setCached(`connector:appstore:${new Date().toISOString().slice(0, 7)}`, { downloads: 42, mrr: 999, arr: 11988 });
 });
 
 function cookieFromSetCookie(setCookie: string): string {

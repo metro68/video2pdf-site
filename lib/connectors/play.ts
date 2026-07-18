@@ -3,6 +3,7 @@ import type { Metrics } from "@/lib/types";
 import type { ConnectorResult } from "@/lib/connectors/types";
 import { getCached, setCached } from "@/lib/cache";
 import { mrrFromSubs, arrFromMrr } from "@/lib/pricing";
+import { resolveMonthWindow, type MonthWindow } from "@/lib/month";
 
 // Google exposes install and subscription statistics ONLY as CSV exports in a
 // per-developer Cloud Storage bucket (pubsite_prod_rev_...). The Play
@@ -154,58 +155,53 @@ async function fetchGcsObject(token: string, bucket: string, object: string): Pr
   return res.arrayBuffer();
 }
 
-function ym(d: Date): string {
-  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-}
 
-async function fetchRaw(): Promise<PlayRaw> {
+const PAST_MONTH_TTL_MS = 24 * 60 * 60 * 1000;
+
+async function fetchRaw(window: MonthWindow): Promise<PlayRaw> {
   const sa = serviceAccount();
   const token = await accessToken(sa);
   const bucket = process.env.GOOGLE_PLAY_STATS_BUCKET!.replace(/^gs:\/\//, "").replace(/\/$/, "");
   const pkg = process.env.GOOGLE_PLAY_PACKAGE_NAME!;
   const product = process.env.GOOGLE_PLAY_SUBSCRIPTION_PRODUCT_ID || "video2pdf_pro_annual";
+  const ymCompact = window.ym.replace("-", "");
 
-  const now = new Date();
-  const prev = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-  const since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
-
-  // Installs: current + previous month overview files cover the 30-day window.
-  const installFiles = await Promise.all(
-    [now, prev].map((d) =>
-      fetchGcsObject(token, bucket, `stats/installs/installs_${pkg}_${ym(d)}_overview.csv`),
-    ),
+  // Installs: Play's overview CSV is already one file per month.
+  const installFile = await fetchGcsObject(
+    token,
+    bucket,
+    `stats/installs/installs_${pkg}_${ymCompact}_overview.csv`,
   );
-  const installs = installFiles
-    .filter((f): f is ArrayBuffer => f !== null)
-    .map((f) => sumDailyInstalls(decodePlayCsv(f), since))
-    .reduce((a, b) => a + b, 0);
+  const installs = installFile
+    ? sumDailyInstalls(decodePlayCsv(installFile), window.from)
+    : 0;
 
-  // Active subscribers: latest snapshot from the newest subscriptions file.
-  let paidSubs = 0;
-  for (const d of [now, prev]) {
-    const f = await fetchGcsObject(
-      token,
-      bucket,
-      `financial-stats/subscriptions/subscriptions_${pkg}_${product}_${ym(d)}_country.csv`,
-    );
-    if (f) {
-      paidSubs = latestActiveSubscriptions(decodePlayCsv(f));
-      break;
-    }
-  }
+  // Active subscribers: the month's subscriptions file; the latest row within
+  // it is the snapshot as of month end (or "so far" for the current month).
+  // A missing file means no subscription activity that month: honestly 0.
+  const subFile = await fetchGcsObject(
+    token,
+    bucket,
+    `financial-stats/subscriptions/subscriptions_${pkg}_${product}_${ymCompact}_country.csv`,
+  );
+  const paidSubs = subFile ? latestActiveSubscriptions(decodePlayCsv(subFile)) : 0;
 
   return { installs, paidSubs };
 }
 
-export async function fetchMetrics(): Promise<ConnectorResult<Metrics>> {
+export async function fetchMetrics(month?: string): Promise<ConnectorResult<Metrics>> {
   if (!hasCredentials()) {
     return { data: null, asOf: null, status: "awaiting_credentials" };
   }
-  const cached = getCached<Metrics>(CACHE_KEY);
+  const window = resolveMonthWindow(month);
+  const cacheKey = `${CACHE_KEY}:${window.ym}`;
+  const cached = getCached<Metrics>(cacheKey);
   if (cached) return { data: cached.value, asOf: cached.asOf, status: "ok" };
   try {
-    const data = normalize(await fetchRaw());
-    const asOf = setCached(CACHE_KEY, data);
+    const data = normalize(await fetchRaw(window));
+    const asOf = window.isCurrent
+      ? setCached(cacheKey, data)
+      : setCached(cacheKey, data, PAST_MONTH_TTL_MS);
     return { data, asOf, status: "ok" };
   } catch (e) {
     return { data: null, asOf: null, status: "error", error: (e as Error).message };

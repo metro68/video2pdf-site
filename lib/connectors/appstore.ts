@@ -4,6 +4,7 @@ import type { Metrics } from "@/lib/types";
 import type { ConnectorResult } from "@/lib/connectors/types";
 import { getCached, setCached } from "@/lib/cache";
 import { mrrFromSubs, arrFromMrr } from "@/lib/pricing";
+import { resolveMonthWindow, windowDates, type MonthWindow } from "@/lib/month";
 
 const CACHE_KEY = "connector:appstore";
 
@@ -18,16 +19,19 @@ function hasCredentials(): boolean {
 
 interface AppStoreRaw {
   downloads: number;
-  paidSubs: number;
+  /** null = subscriber snapshot unavailable (e.g. months beyond Apple's daily
+   * report retention); rendered as n/a, never as a fake 0. */
+  paidSubs: number | null;
 }
 
 export function normalize(raw: unknown): Metrics {
   const r = raw as AppStoreRaw | null;
-  const paidSubs = r?.paidSubs ?? 0;
-  const mrr = mrrFromSubs(paidSubs);
+  const downloads = r?.downloads ?? 0;
+  if (r?.paidSubs == null) return { downloads };
+  const mrr = mrrFromSubs(r.paidSubs);
   return {
-    downloads: r?.downloads ?? 0,
-    paidSubs,
+    downloads,
+    paidSubs: r.paidSubs,
     mrr,
     arr: arrFromMrr(mrr),
   };
@@ -101,6 +105,8 @@ function daysAgo(n: number): string {
   return new Date(Date.now() - n * dayMs).toISOString().slice(0, 10);
 }
 
+const PAST_MONTH_TTL_MS = 24 * 60 * 60 * 1000;
+
 async function fetchReport(
   token: string,
   params: Record<string, string>,
@@ -117,59 +123,82 @@ async function fetchReport(
   return gunzipSync(buf).toString("utf8");
 }
 
-// Rolling window for the downloads tile. Daily sales reports lag ~2 days, so
-// the window is days 2..31 back: the 30 most recent reportable days.
-const DOWNLOAD_WINDOW_DAYS = 30;
+// Daily reports lag about two days behind.
 const REPORT_LAG_DAYS = 2;
 
-async function fetchRaw(): Promise<AppStoreRaw> {
+async function fetchRaw(window: MonthWindow): Promise<AppStoreRaw> {
   const token = await appStoreToken();
   const vendorNumber = process.env.APPSTORE_VENDOR_NUMBER!;
 
-  // Downloads: sum first-time installs across the last 30 reportable days.
-  // A missing day (Apple 404s dates with no data or not-yet-ready reports)
-  // counts as zero rather than failing the whole metric.
-  const dailyTotals = await Promise.all(
-    Array.from({ length: DOWNLOAD_WINDOW_DAYS }, (_, i) =>
-      fetchReport(token, {
-        "filter[frequency]": "DAILY",
-        "filter[reportType]": "SALES",
-        "filter[reportSubType]": "SUMMARY",
-        "filter[vendorNumber]": vendorNumber,
-        "filter[reportDate]": daysAgo(REPORT_LAG_DAYS + i),
-      })
-        .then(parseSalesDownloads)
-        .catch(() => 0),
-    ),
-  );
-  const downloads = dailyTotals.reduce((sum, n) => sum + n, 0);
+  let downloads: number;
+  if (window.isCurrent) {
+    // Current month: sum daily reports from the month start up to the report
+    // lag. A missing day (Apple 404s dates with no data or not-yet-ready
+    // reports) counts as zero rather than failing the whole metric.
+    const cutoff = daysAgo(REPORT_LAG_DAYS);
+    const dates = windowDates(window).filter((d) => d <= cutoff);
+    const dailyTotals = await Promise.all(
+      dates.map((date) =>
+        fetchReport(token, {
+          "filter[frequency]": "DAILY",
+          "filter[reportType]": "SALES",
+          "filter[reportSubType]": "SUMMARY",
+          "filter[vendorNumber]": vendorNumber,
+          "filter[reportDate]": date,
+        })
+          .then(parseSalesDownloads)
+          .catch(() => 0),
+      ),
+    );
+    downloads = dailyTotals.reduce((sum, n) => sum + n, 0);
+  } else {
+    // Past month: Apple publishes a single MONTHLY sales report (~5 days
+    // after month end), which also outlives the ~30-day daily retention.
+    downloads = await fetchReport(token, {
+      "filter[frequency]": "MONTHLY",
+      "filter[reportType]": "SALES",
+      "filter[reportSubType]": "SUMMARY",
+      "filter[vendorNumber]": vendorNumber,
+      "filter[reportDate]": window.ym,
+    })
+      .then(parseSalesDownloads)
+      .catch(() => 0);
+  }
 
-  // Active subscribers: daily SUBSCRIPTION summary (state snapshot), 2 days
-  // back. Version 1_4 verified working against the live API.
-  const subTsv = await fetchReport(token, {
+  // Active subscribers: daily SUBSCRIPTION snapshot. Current month = latest
+  // reportable day; past month = the month's last day. Daily reports are only
+  // retained ~30 days, so older months resolve to null (shown as n/a).
+  const subDate = window.isCurrent
+    ? daysAgo(REPORT_LAG_DAYS)
+    : window.to;
+  const paidSubs = await fetchReport(token, {
     "filter[frequency]": "DAILY",
     "filter[reportType]": "SUBSCRIPTION",
     "filter[reportSubType]": "SUMMARY",
     "filter[vendorNumber]": vendorNumber,
     "filter[version]": "1_4",
-    "filter[reportDate]": daysAgo(REPORT_LAG_DAYS),
-  });
+    "filter[reportDate]": subDate,
+  })
+    .then(parseActiveSubscribers)
+    .catch(() => null);
 
-  return {
-    downloads,
-    paidSubs: parseActiveSubscribers(subTsv),
-  };
+  return { downloads, paidSubs };
 }
 
-export async function fetchMetrics(): Promise<ConnectorResult<Metrics>> {
+export async function fetchMetrics(month?: string): Promise<ConnectorResult<Metrics>> {
   if (!hasCredentials()) {
     return { data: null, asOf: null, status: "awaiting_credentials" };
   }
-  const cached = getCached<Metrics>(CACHE_KEY);
+  const window = resolveMonthWindow(month);
+  const cacheKey = `${CACHE_KEY}:${window.ym}`;
+  const cached = getCached<Metrics>(cacheKey);
   if (cached) return { data: cached.value, asOf: cached.asOf, status: "ok" };
   try {
-    const data = normalize(await fetchRaw());
-    const asOf = setCached(CACHE_KEY, data);
+    const data = normalize(await fetchRaw(window));
+    // Past months are immutable; cache them for a day.
+    const asOf = window.isCurrent
+      ? setCached(cacheKey, data)
+      : setCached(cacheKey, data, PAST_MONTH_TTL_MS);
     return { data, asOf, status: "ok" };
   } catch (e) {
     return { data: null, asOf: null, status: "error", error: (e as Error).message };

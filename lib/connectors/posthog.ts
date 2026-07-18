@@ -1,6 +1,7 @@
 import type { Metrics } from "@/lib/types";
 import type { ConnectorResult } from "@/lib/connectors/types";
 import { getCached, setCached } from "@/lib/cache";
+import { resolveMonthWindow } from "@/lib/month";
 
 const CACHE_KEY = "connector:posthog";
 
@@ -11,12 +12,14 @@ function hasCredentials(): boolean {
 export function normalize(raw: unknown): Metrics {
   const r = raw as { results?: Array<{ data?: number[] }> } | null;
   const series = r?.results?.[0]?.data ?? [];
-  // The query ends at yesterday, so the last bucket is a complete day.
-  const dau = series.length ? series[series.length - 1] : 0;
+  // Average daily active users across the month window (complete days only).
+  const dau = series.length
+    ? Math.round(series.reduce((a, b) => a + b, 0) / series.length)
+    : 0;
   return { dau };
 }
 
-async function fetchRaw(): Promise<unknown> {
+async function fetchRaw(from: string, to: string): Promise<unknown> {
   const host = process.env.POSTHOG_HOST!.replace(/\/$/, "");
   const projectId = process.env.POSTHOG_PROJECT_ID!;
   const apiKey = process.env.POSTHOG_API_KEY!;
@@ -31,7 +34,7 @@ async function fetchRaw(): Promise<unknown> {
     query: {
       kind: "TrendsQuery",
       series: [{ kind: "EventsNode", event: null, math: "dau" }],
-      dateRange: { date_from: "-8d", date_to: "-1d" },
+      dateRange: { date_from: from, date_to: to },
       interval: "day",
     },
   };
@@ -51,15 +54,21 @@ async function fetchRaw(): Promise<unknown> {
   return res.json();
 }
 
-export async function fetchMetrics(): Promise<ConnectorResult<Metrics>> {
+const PAST_MONTH_TTL_MS = 24 * 60 * 60 * 1000;
+
+export async function fetchMetrics(month?: string): Promise<ConnectorResult<Metrics>> {
   if (!hasCredentials()) {
     return { data: null, asOf: null, status: "awaiting_credentials" };
   }
-  const cached = getCached<Metrics>(CACHE_KEY);
+  const window = resolveMonthWindow(month);
+  const cacheKey = `${CACHE_KEY}:${window.ym}`;
+  const cached = getCached<Metrics>(cacheKey);
   if (cached) return { data: cached.value, asOf: cached.asOf, status: "ok" };
   try {
-    const data = normalize(await fetchRaw());
-    const asOf = setCached(CACHE_KEY, data);
+    const data = normalize(await fetchRaw(window.from, window.to));
+    const asOf = window.isCurrent
+      ? setCached(cacheKey, data)
+      : setCached(cacheKey, data, PAST_MONTH_TTL_MS);
     return { data, asOf, status: "ok" };
   } catch (e) {
     return { data: null, asOf: null, status: "error", error: (e as Error).message };

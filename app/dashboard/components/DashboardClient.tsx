@@ -37,15 +37,20 @@ const CONSOLE = {
 
 export default function DashboardClient({ role }: { role: Role }) {
   const router = useRouter();
+  const currentYm = new Date().toISOString().slice(0, 7);
+  const [month, setMonth] = useState(currentYm);
   const [metrics, setMetrics] = useState<Record<Provider, MetricResponse | null>>(
     () => Object.fromEntries(PROVIDERS.map((p) => [p, null])) as Record<Provider, MetricResponse | null>,
   );
 
   useEffect(() => {
     let cancelled = false;
+    setMetrics(
+      Object.fromEntries(PROVIDERS.map((p) => [p, null])) as Record<Provider, MetricResponse | null>,
+    );
     Promise.all(
       PROVIDERS.map((p) =>
-        fetch(`/api/metrics/${p}`)
+        fetch(`/api/metrics/${p}?month=${month}`)
           .then((r) => r.json() as Promise<MetricResponse>)
           .then((res) => [p, res] as const)
           .catch(() => [p, { status: "error", asOf: null, data: null } as MetricResponse] as const),
@@ -57,7 +62,7 @@ export default function DashboardClient({ role }: { role: Role }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [month]);
 
   async function onSignOut() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -69,9 +74,21 @@ export default function DashboardClient({ role }: { role: Role }) {
     return d && typeof d[key] === "number" ? d[key] : undefined;
   }
 
+  const isCurrentMonth = month === currentYm;
+  const monthLabel = new Date(`${month}-01T00:00:00Z`).toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
   const downloads = (num("appstore", "downloads") ?? 0) + (num("play", "downloads") ?? 0);
   const dau = num("posthog", "dau");
-  const paidSubs = (num("appstore", "paidSubs") ?? 0) + (num("play", "paidSubs") ?? 0);
+  // Apple's daily subscription snapshots are only retained ~30 days; for older
+  // months the connector reports no subscriber data at all. Show n/a rather
+  // than a fake 0 in that case.
+  const appstoreSubs = num("appstore", "paidSubs");
+  const subsKnown = appstoreSubs !== undefined;
+  const paidSubs = (appstoreSubs ?? 0) + (num("play", "paidSubs") ?? 0);
   const mrr = (num("appstore", "mrr") ?? 0) + (num("play", "mrr") ?? 0);
   const adSpend =
     (num("meta", "adSpend") ?? 0) +
@@ -95,49 +112,63 @@ export default function DashboardClient({ role }: { role: Role }) {
               </p>
             </div>
           </div>
-          <button onClick={onSignOut} className="text-sm text-brand-text-secondary underline">
-            Sign out
-          </button>
+          <div className="flex items-center gap-4">
+            <input
+              type="month"
+              value={month}
+              max={currentYm}
+              onChange={(e) => e.target.value && setMonth(e.target.value)}
+              className="rounded-lg bg-brand-bg-card border border-brand-border px-3 py-1.5 text-sm text-brand-text"
+              aria-label="Month"
+            />
+            <button onClick={onSignOut} className="text-sm text-brand-text-secondary underline">
+              Sign out
+            </button>
+          </div>
         </header>
 
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <KpiTile
-            label="New downloads (30 days)"
+            label={`New downloads (${monthLabel})`}
             value={downloads.toLocaleString()}
-            description="First-time installs over the last 30 reported days, App Store + Google Play combined. Excludes updates, re-downloads, and in-app purchases. Lags 1-2 days."
+            description={`First-time installs in ${monthLabel}, App Store + Google Play combined. Excludes updates, re-downloads, and in-app purchases. Current month lags 1-2 days behind.`}
             sources={[CONSOLE.appstore, CONSOLE.play]}
           />
           <KpiTile
-            label="Daily active users"
+            label="Avg daily active users"
             value={dau != null ? dau.toLocaleString() : "n/a"}
-            description="Distinct users who did anything in the app on the last complete day, from product analytics. Requires PostHog to be receiving events from the app."
+            description={`Average distinct users who did anything in the app per day in ${monthLabel}, from product analytics. Requires PostHog to be receiving events from the app.`}
             sources={[CONSOLE.posthog]}
           />
           <KpiTile
             label="Paid subscribers"
-            value={paidSubs.toLocaleString()}
-            description="Active paid subscriptions right now, App Store + Google Play. A user who cancels but has not lapsed still counts; refunds drop off."
+            value={subsKnown ? paidSubs.toLocaleString() : "n/a"}
+            description={
+              isCurrentMonth
+                ? "Active paid subscriptions right now, App Store + Google Play. A user who cancels but has not lapsed still counts; refunds drop off."
+                : `Active paid subscriptions as of the end of ${monthLabel}. Apple only retains daily snapshots ~30 days, so older months show n/a.`
+            }
             sources={[CONSOLE.appstore, CONSOLE.play]}
           />
           <KpiTile
-            label="Ad spend (7 days)"
+            label={`Ad spend (${monthLabel})`}
             value={`$${adSpend.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-            description="Total ad spend over the last 7 days across Meta, TikTok, and AppsFlyer-tracked partners. $0 means no spend or no active campaigns."
+            description={`Total ad spend in ${monthLabel} across Meta, TikTok, and AppsFlyer-tracked partners. $0 means no spend or no active campaigns.`}
             sources={[CONSOLE.meta, CONSOLE.tiktok, CONSOLE.appsflyer]}
           />
           {role === "admin" ? (
             <KpiTile
               label="MRR"
-              value={`$${mrr.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-              description="Monthly recurring revenue = active paid subscribers x $29.99/12 (US list price; other storefronts price differently, so this is an approximation). Cancelled-but-not-lapsed subscribers are included; refunds are not."
+              value={subsKnown ? `$${mrr.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "n/a"}
+              description={`Monthly recurring revenue = active paid subscribers x $29.99/12 (US list price; other storefronts price differently, so this is an approximation). ${isCurrentMonth ? "Live snapshot." : `As of the end of ${monthLabel}.`} Cancelled-but-not-lapsed subscribers are included; refunds are not.`}
               sources={[CONSOLE.appstore, CONSOLE.play]}
             />
           ) : null}
           {role === "admin" ? (
             <KpiTile
               label="ARR"
-              value={`$${(mrr * 12).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-              description="Annual recurring revenue = MRR x 12. A projection of current MRR, not booked revenue."
+              value={subsKnown ? `$${(mrr * 12).toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "n/a"}
+              description="Annual recurring revenue = MRR x 12. A projection of the MRR snapshot, not booked revenue."
               sources={[CONSOLE.appstore, CONSOLE.play]}
             />
           ) : null}
@@ -146,7 +177,7 @@ export default function DashboardClient({ role }: { role: Role }) {
         <section>
           <div className="mb-2 text-sm font-semibold text-brand-text">Ad performance by channel</div>
           <p className="mb-3 text-xs text-brand-text-secondary">
-            Spend over the last 7 days per channel, from each ad platform&apos;s reporting API. A
+            Spend in {monthLabel} per channel, from each ad platform&apos;s reporting API. A
             channel with no active campaigns shows $0.
           </p>
           <AdSection

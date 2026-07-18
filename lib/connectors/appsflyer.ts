@@ -1,6 +1,7 @@
 import type { Metrics } from "@/lib/types";
 import type { ConnectorResult } from "@/lib/connectors/types";
 import { getCached, setCached } from "@/lib/cache";
+import { resolveMonthWindow } from "@/lib/month";
 
 const CACHE_KEY = "connector:appsflyer";
 
@@ -22,13 +23,6 @@ export function normalize(raw: unknown): Metrics {
   return { downloads: installs, adSpend: cost };
 }
 
-function last7DaysRange(): { from: string; to: string } {
-  const dayMs = 24 * 60 * 60 * 1000;
-  const to = new Date();
-  const from = new Date(to.getTime() - 6 * dayMs);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  return { from: fmt(from), to: fmt(to) };
-}
 
 // AppsFlyer aggregate reports come back as CSV. Sum installs and cost across rows.
 function parseAggregateCsv(csv: string): { installs: number; cost: number } {
@@ -62,8 +56,7 @@ async function fetchApp(appId: string, from: string, to: string): Promise<{ inst
   return parseAggregateCsv(await res.text());
 }
 
-async function fetchRaw(): Promise<unknown> {
-  const { from, to } = last7DaysRange();
+async function fetchRaw(from: string, to: string): Promise<unknown> {
   const results = await Promise.all(appIds().map((id) => fetchApp(id, from, to)));
   return results.reduce(
     (acc, r) => ({ installs: acc.installs + r.installs, cost: acc.cost + r.cost }),
@@ -71,17 +64,22 @@ async function fetchRaw(): Promise<unknown> {
   );
 }
 
-export async function fetchMetrics(): Promise<ConnectorResult<Metrics>> {
+const CURRENT_TTL_MS = 6 * 60 * 60 * 1000;
+const PAST_MONTH_TTL_MS = 24 * 60 * 60 * 1000;
+
+export async function fetchMetrics(month?: string): Promise<ConnectorResult<Metrics>> {
   if (!hasCredentials()) {
     return { data: null, asOf: null, status: "awaiting_credentials" };
   }
-  const cached = getCached<Metrics>(CACHE_KEY);
+  const window = resolveMonthWindow(month);
+  const cacheKey = `${CACHE_KEY}:${window.ym}`;
+  const cached = getCached<Metrics>(cacheKey);
   if (cached) return { data: cached.value, asOf: cached.asOf, status: "ok" };
   try {
-    const data = normalize(await fetchRaw());
-    // AppsFlyer quota for 3+ day ranges is 24 calls/day per app; a 6h TTL
-    // keeps us at ~4/day/app even across deploy restarts (doc-verified).
-    const asOf = setCached(CACHE_KEY, data, 6 * 60 * 60 * 1000);
+    const data = normalize(await fetchRaw(window.from, window.to));
+    // AppsFlyer quota for 3+ day ranges is 24 calls/day per app; long TTLs
+    // keep us at a handful of calls/day/app even across month switches.
+    const asOf = setCached(cacheKey, data, window.isCurrent ? CURRENT_TTL_MS : PAST_MONTH_TTL_MS);
     return { data, asOf, status: "ok" };
   } catch (e) {
     return { data: null, asOf: null, status: "error", error: (e as Error).message };

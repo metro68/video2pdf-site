@@ -1,6 +1,7 @@
 import type { Metrics } from "@/lib/types";
 import type { ConnectorResult } from "@/lib/connectors/types";
 import { getCached, setCached } from "@/lib/cache";
+import { resolveMonthWindow } from "@/lib/month";
 
 const CACHE_KEY = "connector:meta";
 // Marketing API versions expire ~yearly; v21.0 expired Sep 2025 (expired
@@ -22,7 +23,7 @@ export function normalize(raw: unknown): Metrics {
   return { adSpend: spend, roas, impressions, clicks };
 }
 
-async function fetchRaw(): Promise<unknown> {
+async function fetchRaw(from: string, to: string): Promise<unknown> {
   const token = process.env.META_ACCESS_TOKEN!;
   // Accept an account id with or without the "act_" prefix.
   const rawAccount = process.env.META_AD_ACCOUNT_ID!;
@@ -30,7 +31,7 @@ async function fetchRaw(): Promise<unknown> {
 
   const params = new URLSearchParams({
     fields: "spend,impressions,clicks,purchase_roas",
-    date_preset: "last_7d",
+    time_range: JSON.stringify({ since: from, until: to }),
     access_token: token,
   });
 
@@ -44,15 +45,21 @@ async function fetchRaw(): Promise<unknown> {
   return res.json();
 }
 
-export async function fetchMetrics(): Promise<ConnectorResult<Metrics>> {
+const PAST_MONTH_TTL_MS = 24 * 60 * 60 * 1000;
+
+export async function fetchMetrics(month?: string): Promise<ConnectorResult<Metrics>> {
   if (!hasCredentials()) {
     return { data: null, asOf: null, status: "awaiting_credentials" };
   }
-  const cached = getCached<Metrics>(CACHE_KEY);
+  const window = resolveMonthWindow(month);
+  const cacheKey = `${CACHE_KEY}:${window.ym}`;
+  const cached = getCached<Metrics>(cacheKey);
   if (cached) return { data: cached.value, asOf: cached.asOf, status: "ok" };
   try {
-    const data = normalize(await fetchRaw());
-    const asOf = setCached(CACHE_KEY, data);
+    const data = normalize(await fetchRaw(window.from, window.to));
+    const asOf = window.isCurrent
+      ? setCached(cacheKey, data)
+      : setCached(cacheKey, data, PAST_MONTH_TTL_MS);
     return { data, asOf, status: "ok" };
   } catch (e) {
     return { data: null, asOf: null, status: "error", error: (e as Error).message };

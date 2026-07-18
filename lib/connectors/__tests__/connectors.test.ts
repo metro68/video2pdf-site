@@ -41,9 +41,9 @@ describe("connectors: normalize", () => {
     expect(m.roas).toBeCloseTo(3.2);
   });
 
-  it("posthog.normalize maps dau from the last complete day of a query result", () => {
+  it("posthog.normalize averages dau across the month window", () => {
     const raw = { results: [{ data: [10, 20, 30] }] };
     const m = posthog.normalize(raw);
-    expect(m.dau).toBe(30);
+    expect(m.dau).toBe(20);
   });
 });

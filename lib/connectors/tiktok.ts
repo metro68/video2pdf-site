@@ -1,6 +1,7 @@
 import type { Metrics } from "@/lib/types";
 import type { ConnectorResult } from "@/lib/connectors/types";
 import { getCached, setCached } from "@/lib/cache";
+import { resolveMonthWindow } from "@/lib/month";
 
 const CACHE_KEY = "connector:tiktok";
 
@@ -17,19 +18,10 @@ export function normalize(raw: unknown): Metrics {
   return { adSpend: spend, impressions, clicks };
 }
 
-function last7DaysRange(): { start: string; end: string } {
-  // TikTok expects YYYY-MM-DD. Derive a 7-day window ending today (UTC).
-  const dayMs = 24 * 60 * 60 * 1000;
-  const end = new Date();
-  const start = new Date(end.getTime() - 6 * dayMs);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  return { start: fmt(start), end: fmt(end) };
-}
 
-async function fetchRaw(): Promise<unknown> {
+async function fetchRaw(start: string, end: string): Promise<unknown> {
   const token = process.env.TIKTOK_ACCESS_TOKEN!;
   const advertiserId = process.env.TIKTOK_ADVERTISER_ID!;
-  const { start, end } = last7DaysRange();
 
   const params = new URLSearchParams({
     advertiser_id: advertiserId,
@@ -56,15 +48,21 @@ async function fetchRaw(): Promise<unknown> {
   return json;
 }
 
-export async function fetchMetrics(): Promise<ConnectorResult<Metrics>> {
+const PAST_MONTH_TTL_MS = 24 * 60 * 60 * 1000;
+
+export async function fetchMetrics(month?: string): Promise<ConnectorResult<Metrics>> {
   if (!hasCredentials()) {
     return { data: null, asOf: null, status: "awaiting_credentials" };
   }
-  const cached = getCached<Metrics>(CACHE_KEY);
+  const window = resolveMonthWindow(month);
+  const cacheKey = `${CACHE_KEY}:${window.ym}`;
+  const cached = getCached<Metrics>(cacheKey);
   if (cached) return { data: cached.value, asOf: cached.asOf, status: "ok" };
   try {
-    const data = normalize(await fetchRaw());
-    const asOf = setCached(CACHE_KEY, data);
+    const data = normalize(await fetchRaw(window.from, window.to));
+    const asOf = window.isCurrent
+      ? setCached(cacheKey, data)
+      : setCached(cacheKey, data, PAST_MONTH_TTL_MS);
     return { data, asOf, status: "ok" };
   } catch (e) {
     return { data: null, asOf: null, status: "error", error: (e as Error).message };

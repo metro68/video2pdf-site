@@ -27,7 +27,7 @@ describe("metrics route redaction", () => {
     process.env.APPSTORE_ISSUER_ID = "x";
     process.env.APPSTORE_PRIVATE_KEY = "x";
     process.env.APPSTORE_VENDOR_NUMBER = "x";
-    setCached("connector:appstore", { downloads: 10, mrr: 500, arr: 6000 });
+    setCached(`connector:appstore:${new Date().toISOString().slice(0, 7)}`, { downloads: 10, mrr: 500, arr: 6000 });
     const res = await getWithRole(GET, "marketing");
     const json = await res.json();
     expect(json.data).not.toHaveProperty("mrr");
@@ -42,7 +42,7 @@ describe("metrics route redaction", () => {
     process.env.APPSTORE_ISSUER_ID = "x";
     process.env.APPSTORE_PRIVATE_KEY = "x";
     process.env.APPSTORE_VENDOR_NUMBER = "x";
-    setCached("connector:appstore", { downloads: 10, mrr: 500, arr: 6000 });
+    setCached(`connector:appstore:${new Date().toISOString().slice(0, 7)}`, { downloads: 10, mrr: 500, arr: 6000 });
     const res = await getWithRole(GET, "admin");
     const json = await res.json();
     expect(json.data.mrr).toBe(500);

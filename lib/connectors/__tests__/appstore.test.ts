@@ -48,6 +48,14 @@ describe("appstore.normalize", () => {
     expect(m.arr).toBeCloseTo(mrrFromSubs(100) * 12, 2);
   });
 
+  it("omits subscriber-derived fields when the snapshot is unavailable", () => {
+    const m = normalize({ downloads: 5, paidSubs: null });
+    expect(m.downloads).toBe(5);
+    expect(m.paidSubs).toBeUndefined();
+    expect(m.mrr).toBeUndefined();
+    expect(m.arr).toBeUndefined();
+  });
+
   it("is all zero when there are no subscribers", () => {
     const m = normalize({ downloads: 0, paidSubs: 0 });
     expect(m.mrr).toBe(0);
