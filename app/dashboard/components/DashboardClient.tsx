@@ -88,7 +88,6 @@ export default function DashboardClient({ role }: { role: Role }) {
   // than a fake 0 in that case.
   const appstoreSubs = num("appstore", "paidSubs");
   const subsKnown = appstoreSubs !== undefined;
-  const paidSubs = (appstoreSubs ?? 0) + (num("play", "paidSubs") ?? 0);
   const mrr = (num("appstore", "mrr") ?? 0) + (num("play", "mrr") ?? 0);
   const adSpend =
     (num("meta", "adSpend") ?? 0) +
@@ -145,16 +144,6 @@ export default function DashboardClient({ role }: { role: Role }) {
             value={dau != null ? dau.toLocaleString() : "n/a"}
             description={`Average distinct users who did anything in the app per day in ${monthLabel}, from product analytics. Requires PostHog to be receiving events from the app.`}
             sources={[CONSOLE.posthog]}
-          />
-          <KpiTile
-            label="Paid subscribers"
-            value={subsKnown ? paidSubs.toLocaleString() : "n/a"}
-            description={
-              isCurrentMonth
-                ? "Active paid subscriptions right now, App Store + Google Play. A user who cancels but has not lapsed still counts; refunds drop off."
-                : `Active paid subscriptions as of the end of ${monthLabel}. Apple only retains daily snapshots ~30 days, so older months show n/a.`
-            }
-            sources={[CONSOLE.appstore, CONSOLE.play]}
           />
           <KpiTile
             label={`Ad spend (${monthLabel})`}
