@@ -20,3 +20,11 @@ CREATE TABLE IF NOT EXISTS redeem_tokens (
 );
 
 CREATE INDEX IF NOT EXISTS idx_redeem_tokens_email ON redeem_tokens(email);
+
+-- Deny-all Row Level Security. Our site and server connect with the full Postgres
+-- service credentials (POSTGRES_URL / DATABASE_URL), which bypass RLS, so backend
+-- access is unaffected. Enabling RLS with no policies blocks Supabase anon and
+-- authenticated keys from ever reading these tables (emails, subscription status,
+-- redeem tokens) via the auto-generated REST/GraphQL API.
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE redeem_tokens ENABLE ROW LEVEL SECURITY;
