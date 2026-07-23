@@ -19,7 +19,7 @@
 - **App stays account-free.** No login/auth surface is added.
 - **App deep link scheme:** `video2pdf://` (bundle/package `com.vid2pdf.app`). No universal links exist, so a manual code fallback is REQUIRED.
 - **Entitlement truth for web subs** = the Postgres row's `status` + `current_period_end`, maintained by Stripe webhooks. The webhook is the ONLY writer; `server/` only reads.
-- **Site patterns:** App Router route handlers export `GET`/`POST` returning `NextResponse`; business logic in `@/lib/...`; tests in `__tests__` dirs using Vitest globals (no imports of `describe`/`it`/`expect`).
+- **Site patterns:** App Router route handlers export `GET`/`POST` returning `NextResponse`; business logic in `@/lib/...`; tests in `__tests__` dirs. **Site tests MUST explicitly `import { describe, it, expect, vi, beforeEach } from "vitest"`** (as needed) — this is the repo's real convention; `tsc` fails without it because the repo does not reference `vitest/globals` types even though `vitest.config.ts` sets `globals: true`. (Note: the `server/` repo tests already import from `"vitest"` too, so this applies there as well.)
 - **TypeScript strict**, no `any` without a comment.
 - **TDD:** every task writes the failing test first, watches it fail, implements minimally, watches it pass, commits.
 - Site work is on branch `feat/web2app-funnel`. `server/`/app work is on a matching branch in the `video2pdf-app` repo (`feat/web2app-funnel`).
