@@ -8,6 +8,8 @@
 
 **Tech Stack:** Next.js 15 App Router + React 18 + Tailwind (site), Vitest + jsdom (site tests), Stripe hosted Checkout (subscription mode), Vercel Postgres (`@vercel/postgres`), Meta Pixel `fbq` + Conversions API, Express + TypeScript + Vitest (`server/`), Expo/React Native + expo-iap (app).
 
+> **Correction (post-implementation):** the free trial is on the ANNUAL plan, not weekly. Weekly $4.99/wk is charged immediately with no trial; Annual $29.99/yr has the 3-day free trial (matching the app, where `PaywallScreen.tsx` reads the annual product's `freeTrialDays`). Some task code snippets below still show the trial on weekly (`plans.weekly.trialDays: 3`, `trial_period_days = 3 only for weekly`); those are superseded. The shipped code and the Global Constraint below are the source of truth. Also: the Meta Purchase value uses the plan CATALOG value (weekly 4.99, annual 29.99), not `amount_total`, so an annual trial-start still reports 29.99.
+
 ## Global Constraints
 
 - **No em dashes** in any code, copy, comments, docs, or commit messages. Use commas, colons, parentheses, or two sentences. (Workspace rule.)
