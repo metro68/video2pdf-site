@@ -18,6 +18,7 @@ export function Funnel() {
   const [busy, setBusy] = useState(false);
   const [scanType, setScanType] = useState<ScanType | null>(null);
   const [frequency, setFrequency] = useState<Frequency | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const count = FUNNEL_CONFIG.socialProofCount.toLocaleString();
 
   useEffect(() => {
@@ -27,15 +28,29 @@ export function Funnel() {
   async function startCheckout(plan: "weekly" | "annual") {
     const cents = FUNNEL_CONFIG.plans[plan].cents;
     track("InitiateCheckout", { value: cents / 100, currency: "USD" });
+    setCheckoutError(null);
     setBusy(true);
-    const res = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ plan, email }),
-    });
-    const { url } = await res.json();
-    if (url) window.location.assign(url);
-    setBusy(false);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ plan, email }),
+      });
+      if (res.ok === false) {
+        setCheckoutError("Something went wrong starting checkout. Please try again.");
+        return;
+      }
+      const { url } = await res.json();
+      if (url) {
+        window.location.assign(url);
+      } else {
+        setCheckoutError("Something went wrong starting checkout. Please try again.");
+      }
+    } catch {
+      setCheckoutError("Something went wrong starting checkout. Please try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (step === "landing") {
@@ -159,6 +174,11 @@ export function Funnel() {
           <li key={benefit}>{benefit}</li>
         ))}
       </ul>
+      {checkoutError && (
+        <p role="alert" className="mt-6 max-w-sm text-center text-sm text-red-500">
+          {checkoutError}
+        </p>
+      )}
       <div className="mt-8 w-full max-w-sm space-y-3">
         <button
           disabled={busy}

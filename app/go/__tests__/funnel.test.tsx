@@ -3,7 +3,11 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Funnel } from "@/app/go/components/Funnel";
 import * as pixel from "@/lib/pixel/events";
 
-const fetchMock = vi.fn(async () => ({ json: async () => ({ url: "https://checkout.test/s/1" }) }));
+const fetchMock = vi.fn(
+  async (): Promise<{ json: () => Promise<{ url?: string }> }> => ({
+    json: async () => ({ url: "https://checkout.test/s/1" }),
+  })
+);
 vi.stubGlobal("fetch", fetchMock);
 
 beforeEach(() => {
@@ -68,5 +72,43 @@ describe("Funnel", () => {
     expect(pixel.track).toHaveBeenCalledWith("InitiateCheckout", { value: 4.99, currency: "USD" });
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.test/s/1"));
+  });
+
+  it("shows an error and re-enables the button when checkout fails to return a url", async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });
+    fetchMock.mockImplementationOnce(async () => ({ json: async () => ({}) }));
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    const weeklyButton = await screen.findByRole("button", { name: /start.*4\.99/i });
+    fireEvent.click(weeklyButton);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByText(/something went wrong starting checkout/i)).toBeInTheDocument()
+    );
+    expect(assign).not.toHaveBeenCalled();
+    await waitFor(() => expect(weeklyButton).not.toBeDisabled());
+  });
+
+  it("shows an error and re-enables the button when the checkout request throws", async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });
+    fetchMock.mockImplementationOnce(async () => {
+      throw new Error("network down");
+    });
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    const weeklyButton = await screen.findByRole("button", { name: /start.*4\.99/i });
+    fireEvent.click(weeklyButton);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByText(/something went wrong starting checkout/i)).toBeInTheDocument()
+    );
+    expect(assign).not.toHaveBeenCalled();
+    await waitFor(() => expect(weeklyButton).not.toBeDisabled());
   });
 });
