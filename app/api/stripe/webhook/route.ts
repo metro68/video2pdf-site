@@ -33,14 +33,33 @@ export async function POST(request: Request): Promise<NextResponse> {
     // Dynamic Stripe Checkout Session payload; only the fields we need are read here.
     const o: any = event.data.object;
     const email = o?.metadata?.email ?? o?.customer_details?.email;
-    if (email) {
-      await mintRedeemToken(email, redeemTtlMs, randomUUID());
-      await sendCapiPurchase({
-        email,
-        value: (o.amount_total ?? 0) / 100,
-        currency: String(o.currency ?? "usd").toUpperCase(),
-        eventId: event.id,
-      });
+    const sessionId = o?.id;
+    if (email && sessionId) {
+      // Idempotency guard: a retried delivery of this event should not mint a
+      // second redeem token or resend CAPI Purchase. If the subscription already
+      // carries a redeem_token in its metadata, this session has already been
+      // processed, so skip minting and CAPI on replay.
+      let alreadyProcessed = false;
+      if (o.subscription) {
+        const subscription = await stripe.subscriptions.retrieve(o.subscription);
+        alreadyProcessed = Boolean(subscription.metadata?.redeem_token);
+      }
+
+      if (!alreadyProcessed) {
+        const token = randomUUID();
+        await mintRedeemToken(email, redeemTtlMs, token);
+        if (o.subscription) {
+          await stripe.subscriptions.update(o.subscription, {
+            metadata: { redeem_token: token, email },
+          });
+        }
+        await sendCapiPurchase({
+          email,
+          value: (o.amount_total ?? 0) / 100,
+          currency: String(o.currency ?? "usd").toUpperCase(),
+          eventId: sessionId,
+        });
+      }
     }
   }
 
