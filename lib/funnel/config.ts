@@ -2,8 +2,8 @@ export const FUNNEL_CONFIG = {
   socialProofCount: 12000,
   deepLinkScheme: "video2pdf://",
   plans: {
-    weekly: { price: "$4.99", cents: 499, trialDays: 3, interval: "week" as const },
-    annual: { price: "$29.99", cents: 2999, trialDays: 0, interval: "year" as const },
+    weekly: { price: "$4.99", cents: 499, trialDays: 0, interval: "week" as const },
+    annual: { price: "$29.99", cents: 2999, trialDays: 3, interval: "year" as const },
   },
   proBenefits: [
     "Full-resolution scans",

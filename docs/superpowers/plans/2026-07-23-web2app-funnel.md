@@ -12,7 +12,7 @@
 
 - **No em dashes** in any code, copy, comments, docs, or commit messages. Use commas, colons, parentheses, or two sentences. (Workspace rule.)
 - **No commit attribution** — never add `Co-Authored-By` or attribution trailers.
-- **Web pricing matches store pricing exactly:** Weekly **$4.99** with **3-day free trial**, Annual **$29.99**. No web discount.
+- **Web pricing matches store pricing exactly:** Weekly **$4.99** (no trial, charged immediately), Annual **$29.99** with **3-day free trial**. The trial is on the ANNUAL plan only (matches the app: `PaywallScreen.tsx` reads the annual product's `freeTrialDays`; weekly has no introductory offer). No web discount.
 - **Pro benefit copy verbatim from the app** (`video2pdf-app/src/constants/subscriptionCatalog.ts`): "Full-resolution scans", "Searchable, copyable PDFs", "Unlimited documents".
 - **Social proof anchor:** "12,000+" users, as a single configurable constant.
 - **Email is the permanent restore key.** Redemption tokens are disposable, single-use, expiring.

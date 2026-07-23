@@ -4,8 +4,9 @@ import { FUNNEL_CONFIG, finePrint } from "@/lib/funnel/config";
 describe("FUNNEL_CONFIG", () => {
   it("mirrors app pricing exactly", () => {
     expect(FUNNEL_CONFIG.plans.weekly.price).toBe("$4.99");
-    expect(FUNNEL_CONFIG.plans.weekly.trialDays).toBe(3);
+    expect(FUNNEL_CONFIG.plans.weekly.trialDays).toBe(0);
     expect(FUNNEL_CONFIG.plans.annual.price).toBe("$29.99");
+    expect(FUNNEL_CONFIG.plans.annual.trialDays).toBe(3);
   });
   it("uses the verbatim pro benefits and social proof anchor", () => {
     expect(FUNNEL_CONFIG.proBenefits).toEqual([

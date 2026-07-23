@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 export interface SendCapiPurchaseInput {
   email: string;
   value: number;
@@ -11,6 +13,9 @@ export async function sendCapiPurchase(input: SendCapiPurchaseInput): Promise<vo
   if (!pixelId || !token) return;
 
   const url = `https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${token}`;
+  const hashedEmail = createHash("sha256")
+    .update(input.email.trim().toLowerCase())
+    .digest("hex");
   const body = {
     data: [
       {
@@ -18,6 +23,7 @@ export async function sendCapiPurchase(input: SendCapiPurchaseInput): Promise<vo
         event_time: Math.floor(Date.now() / 1000),
         action_source: "website",
         event_id: input.eventId,
+        user_data: { em: hashedEmail },
         custom_data: { value: input.value, currency: input.currency },
       },
     ],

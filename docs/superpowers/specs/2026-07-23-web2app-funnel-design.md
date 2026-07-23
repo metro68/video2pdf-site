@@ -45,8 +45,10 @@ Steps, top to bottom:
 3. **Value preview** — a short "here's what you get" moment (sample before/after, the
    three Pro benefits below), framed as "ready to unlock", not "start from scratch".
 4. **Paywall** — mirrors the app's real offering exactly:
-   - **Weekly $4.99** with **3-day free trial**
-   - **Annual $29.99**
+   - **Weekly $4.99** (no trial, charged immediately)
+   - **Annual $29.99** with **3-day free trial**
+   - Trial is on the ANNUAL plan only, matching the app (`PaywallScreen.tsx` reads the
+     annual product's `freeTrialDays`; weekly has no introductory offer).
    - Pro benefits (verbatim from app `subscriptionCatalog.ts`): **Full-resolution
      scans**, **Searchable, copyable PDFs**, **Unlimited documents**.
    - Trust block: 12,000+ users, cancel-anytime, trial fine print matching the app's
@@ -80,10 +82,11 @@ navigation does not reload the page, so `PageView` must be fired on route change
 Stripe-hosted Checkout in **subscription mode**, matching store pricing:
 
 - Two Stripe recurring **Prices** created to mirror the app: **$4.99/week** and
-  **$29.99/year**. The weekly price/session sets **`subscription_data.trial_period_days
-  = 3`** to mirror the app's 3-day trial. (Store product IDs for reference:
+  **$29.99/year**. The ANNUAL price/session sets **`subscription_data.trial_period_days
+  = 3`** to mirror the app's 3-day trial; the WEEKLY session sets no trial (charged
+  immediately). (Store product IDs for reference:
   `com.video2pdf.pro.weekly` / `com.video2pdf.pro.annual`, Google
-  `video2pdf_pro_weekly` / `video2pdf_pro_annual` — the Stripe prices are separate
+  `video2pdf_pro_weekly` / `video2pdf_pro_annual`. The Stripe prices are separate
   objects, not the same IDs.)
 - **`POST /api/checkout`** (site route) creates a Checkout Session:
   `mode: 'subscription'`, `customer_email` (captured in the funnel — this is the

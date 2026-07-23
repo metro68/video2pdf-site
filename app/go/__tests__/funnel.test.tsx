@@ -60,7 +60,19 @@ describe("Funnel", () => {
     expect(screen.getByText("Unlimited documents")).toBeInTheDocument();
   });
 
-  it("fires Lead after email and InitiateCheckout on plan select, then redirects", async () => {
+  it("shows the trial wording on the annual plan and not on weekly", async () => {
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    const weeklyButton = await screen.findByRole("button", { name: /weekly.*4\.99/i });
+    const annualButton = await screen.findByRole("button", { name: /3-day free trial.*29\.99/i });
+    expect(weeklyButton).toBeInTheDocument();
+    expect(weeklyButton.textContent).not.toMatch(/trial/i);
+    expect(annualButton).toBeInTheDocument();
+  });
+
+  it("fires Lead after email and InitiateCheckout on weekly plan select, then redirects", async () => {
     const assign = vi.fn();
     Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });
     render(<Funnel />);
@@ -68,8 +80,21 @@ describe("Funnel", () => {
     answerQualifyTaps();
     capturEmailAndContinue();
     expect(pixel.track).toHaveBeenCalledWith("Lead");
-    fireEvent.click(await screen.findByRole("button", { name: /start.*4\.99/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /weekly.*4\.99/i }));
     expect(pixel.track).toHaveBeenCalledWith("InitiateCheckout", { value: 4.99, currency: "USD" });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.test/s/1"));
+  });
+
+  it("fires InitiateCheckout with the annual value on annual plan select", async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    fireEvent.click(await screen.findByRole("button", { name: /3-day free trial.*29\.99/i }));
+    expect(pixel.track).toHaveBeenCalledWith("InitiateCheckout", { value: 29.99, currency: "USD" });
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.test/s/1"));
   });
@@ -82,7 +107,7 @@ describe("Funnel", () => {
     goToQualify();
     answerQualifyTaps();
     capturEmailAndContinue();
-    const weeklyButton = await screen.findByRole("button", { name: /start.*4\.99/i });
+    const weeklyButton = await screen.findByRole("button", { name: /weekly.*4\.99/i });
     fireEvent.click(weeklyButton);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     await waitFor(() =>
@@ -102,7 +127,7 @@ describe("Funnel", () => {
     goToQualify();
     answerQualifyTaps();
     capturEmailAndContinue();
-    const weeklyButton = await screen.findByRole("button", { name: /start.*4\.99/i });
+    const weeklyButton = await screen.findByRole("button", { name: /weekly.*4\.99/i });
     fireEvent.click(weeklyButton);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     await waitFor(() =>

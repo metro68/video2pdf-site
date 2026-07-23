@@ -36,23 +36,23 @@ function firstCallArgs(): {
 }
 
 describe("POST /api/checkout", () => {
-  it("creates a weekly subscription session with a 3-day trial and email metadata", async () => {
+  it("creates a weekly subscription session with no trial and email metadata", async () => {
     const res = await POST(req({ plan: "weekly", email: "a@b.com" }));
     const json = await res.json();
     expect(json.url).toBe("https://checkout.stripe.test/s/1");
     const args = firstCallArgs();
     expect(args.mode).toBe("subscription");
     expect(args.customer_email).toBe("a@b.com");
-    expect(args.subscription_data.trial_period_days).toBe(3);
+    expect(args.subscription_data.trial_period_days).toBeUndefined();
     expect(args.subscription_data.metadata.email).toBe("a@b.com");
     expect(args.line_items[0].price).toBe("price_weekly");
   });
 
-  it("creates an annual session with no trial", async () => {
+  it("creates an annual session with a 3-day trial", async () => {
     await POST(req({ plan: "annual", email: "a@b.com" }));
     const args = firstCallArgs();
     expect(args.line_items[0].price).toBe("price_annual");
-    expect(args.subscription_data.trial_period_days).toBeUndefined();
+    expect(args.subscription_data.trial_period_days).toBe(3);
   });
 
   it("400s on a bad plan", async () => {

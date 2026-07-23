@@ -183,21 +183,21 @@ export function Funnel() {
         <button
           disabled={busy}
           onClick={() => startCheckout("weekly")}
-          className="w-full rounded-lg bg-brand-primary px-6 py-3 font-semibold text-white disabled:opacity-40"
+          className="w-full rounded-lg border border-brand-border px-6 py-3 font-semibold text-brand-text disabled:opacity-40"
         >
-          Start: {FUNNEL_CONFIG.plans.weekly.trialDays}-day free trial, then{" "}
-          <span>{FUNNEL_CONFIG.plans.weekly.price}</span>/week
+          Weekly <span>{FUNNEL_CONFIG.plans.weekly.price}</span>/week
         </button>
         <button
           disabled={busy}
           onClick={() => startCheckout("annual")}
-          className="w-full rounded-lg border border-brand-border px-6 py-3 font-semibold text-brand-text disabled:opacity-40"
+          className="w-full rounded-lg bg-brand-primary px-6 py-3 font-semibold text-white disabled:opacity-40"
         >
-          Annual <span>{FUNNEL_CONFIG.plans.annual.price}</span>
+          {FUNNEL_CONFIG.plans.annual.trialDays}-day free trial, then{" "}
+          <span>{FUNNEL_CONFIG.plans.annual.price}</span>/year
         </button>
       </div>
       <small className="mt-4 max-w-sm text-center text-xs text-brand-text-secondary">
-        {finePrint(FUNNEL_CONFIG.plans.weekly.price, FUNNEL_CONFIG.plans.weekly.trialDays)}
+        {finePrint(FUNNEL_CONFIG.plans.annual.price, FUNNEL_CONFIG.plans.annual.trialDays)}
       </small>
     </main>
   );

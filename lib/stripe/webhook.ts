@@ -44,7 +44,8 @@ export function mapEventToMutation(
   if (!SUBSCRIPTION_EVENTS.has(event.type)) return { kind: "none" };
   // Dynamic Stripe event payload; shape varies by event type and is not fully typed here.
   const o = event.data.object;
-  const email = o?.metadata?.email;
+  const rawEmail = o?.metadata?.email;
+  const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : rawEmail;
   const priceId = o?.items?.data?.[0]?.price?.id;
   const plan = priceId ? priceToPlan[priceId] : undefined;
   if (!email || !plan) return { kind: "none" };
@@ -60,7 +61,9 @@ export function mapEventToMutation(
       stripeSubscriptionId: o.id ?? null,
       plan,
       status,
-      currentPeriodEnd: secToMs(o.current_period_end),
+      // The pinned Stripe apiVersion moved current_period_end off the Subscription
+      // root onto the subscription items; trial_end is still on the root.
+      currentPeriodEnd: secToMs(o?.items?.data?.[0]?.current_period_end),
       trialEnd: secToMs(o.trial_end),
     },
   };
