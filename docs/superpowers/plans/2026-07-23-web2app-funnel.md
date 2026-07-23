@@ -2050,7 +2050,7 @@ git commit -m "Add redeem screen and deep-link routing for web subscribers"
 These are launch-config steps, not code, tracked here so they are not forgotten:
 
 - [ ] Create the two Stripe recurring Prices ($4.99/week with 3-day trial via the checkout param, $29.99/year) in the live account; set `STRIPE_PRICE_WEEKLY`/`STRIPE_PRICE_ANNUAL`.
-- [ ] Register the Stripe webhook endpoint (`/api/stripe/webhook`) and set `STRIPE_WEBHOOK_SECRET`.
+- [ ] Register the Stripe webhook endpoint (`/api/stripe/webhook`) and set `STRIPE_WEBHOOK_SECRET`. Set the endpoint's API version to `2026-06-24.dahlia` to match the installed `stripe` v22 SDK (the code pins this literal).
 - [ ] Provision Vercel Postgres; run `lib/db/schema.sql`; set `POSTGRES_*` on the site and `DATABASE_URL` on the `server/` deploy.
 - [ ] Set `NEXT_PUBLIC_META_PIXEL_ID`, `META_PIXEL_ID`, `META_CAPI_ACCESS_TOKEN`.
 - [ ] E2E test-mode pass: purchase (weekly + annual) → webhook via Stripe CLI → deep link opens app and unlocks → new-device email restore → cancel via test clock revokes at period end.
