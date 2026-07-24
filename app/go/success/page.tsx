@@ -1,5 +1,7 @@
 import { stripe, PRICE_TO_PLAN } from "@/lib/stripe/client";
 import { FUNNEL_CONFIG } from "@/lib/funnel/config";
+import { upsertSubscription, getOrCreateRedeemTokenForEmail } from "@/lib/db/subscriptions";
+import { generateRedeemCode } from "@/lib/db/redeemCode";
 import { Handoff } from "./components/Handoff";
 
 interface SuccessPageProps {
@@ -35,10 +37,48 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
     const plan = subPriceId ? PRICE_TO_PLAN[subPriceId] : undefined;
     value = plan ? FUNNEL_CONFIG.plans[plan].cents / 100 : (session.amount_total ?? 0) / 100;
 
-    token =
+    const metadataToken =
       (session.metadata?.redeem_token as string | undefined) ??
       (subscription?.metadata?.redeem_token as string | undefined) ??
       "";
+
+    const email = (session.customer_details?.email ?? session.metadata?.email ?? "")
+      .toLowerCase()
+      .trim();
+
+    if (email) {
+      // The webhook writes the redeem token to Stripe metadata asynchronously, so it
+      // often has not run yet when the browser lands here right after checkout, which
+      // would otherwise leave the code blank. Get-or-create the token directly instead
+      // of only reading metadata, so a code is always shown. upsertSubscription must run
+      // first: getOrCreateRedeemTokenForEmail inserts against a foreign key on the
+      // subscriptions row, and getOrCreateRedeemTokenForEmail reuses any unconsumed,
+      // unexpired token (including one the webhook already minted), so this agrees with
+      // the webhook and a page refresh never mints duplicates.
+      try {
+        const customerId =
+          typeof session.customer === "string" ? session.customer : (session.customer?.id ?? null);
+        const subscriptionId = subscription?.id ?? null;
+        await upsertSubscription({
+          email,
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          plan: plan ?? "annual",
+          status: "trialing",
+          currentPeriodEnd: null,
+          trialEnd: null,
+        });
+        token = await getOrCreateRedeemTokenForEmail(
+          email,
+          Number(process.env.REDEEM_TOKEN_TTL_MS ?? 604800000),
+          generateRedeemCode(),
+        );
+      } catch {
+        token = metadataToken;
+      }
+    } else {
+      token = metadataToken;
+    }
   }
 
   return <Handoff token={token} value={value} eventId={eventId} />;

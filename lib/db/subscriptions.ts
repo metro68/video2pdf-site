@@ -38,3 +38,26 @@ export async function mintRedeemToken(email: string, ttlMs: number, token: strin
   `;
   return token;
 }
+
+// Returns a usable redeem token for this email, minting one if none exists yet.
+// The success page calls this so a code is ALWAYS shown, even when the Stripe
+// webhook has not finished processing at redirect time (a timing race that would
+// otherwise leave the code blank). Reuses an existing unconsumed, unexpired token
+// so a page refresh does not pile up tokens. Requires the subscriptions row to
+// exist (FK); the caller ensures that via upsertSubscription first.
+export async function getOrCreateRedeemTokenForEmail(
+  email: string,
+  ttlMs: number,
+  newToken: string,
+): Promise<string> {
+  const existing = await sql`
+    SELECT token FROM redeem_tokens
+    WHERE email = ${email} AND consumed_at IS NULL AND expires_at > now()
+    ORDER BY created_at DESC
+    LIMIT 1
+  `;
+  if (existing.rows[0]?.token) {
+    return existing.rows[0].token as string;
+  }
+  return mintRedeemToken(email, ttlMs, newToken);
+}
