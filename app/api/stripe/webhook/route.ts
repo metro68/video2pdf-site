@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { stripe, PRICE_TO_PLAN } from "@/lib/stripe/client";
 import { mapEventToMutation } from "@/lib/stripe/webhook";
 import { upsertSubscription, mintRedeemToken } from "@/lib/db/subscriptions";
+import { generateRedeemCode } from "@/lib/db/redeemCode";
 import { sendCapiPurchase, sendCapiStartTrial } from "@/lib/pixel/capi";
 import { FUNNEL_CONFIG } from "@/lib/funnel/config";
-import { randomUUID } from "node:crypto";
 
 const DEFAULT_REDEEM_TTL_MS = 7 * 86400_000;
 
@@ -68,7 +68,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           trialEnd: null,
         });
 
-        const token = randomUUID();
+        const token = generateRedeemCode();
         await mintRedeemToken(email, redeemTtlMs, token);
         if (o.subscription) {
           await stripe.subscriptions.update(o.subscription, {

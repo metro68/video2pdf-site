@@ -41,7 +41,7 @@ function Shell({
   showProgress?: boolean;
 }) {
   return (
-    <main className="min-h-screen bg-brand-bg text-brand-text flex flex-col items-center px-6 pt-8 pb-10">
+    <main className="min-h-[100dvh] overflow-y-auto bg-brand-bg text-brand-text flex flex-col items-center px-6 pt-8 pb-24">
       {showProgress && (
         <div className="mb-6 w-full flex justify-center">
           <StepProgress step={step} />

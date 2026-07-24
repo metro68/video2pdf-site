@@ -35,7 +35,7 @@ export function Handoff({ token, value, eventId }: HandoffProps) {
   }
 
   return (
-    <main className="min-h-screen bg-brand-bg text-brand-text flex flex-col items-center px-6 pt-10 pb-10">
+    <main className="min-h-[100dvh] overflow-y-auto bg-brand-bg text-brand-text flex flex-col items-center px-6 pt-10 pb-24">
       <div className="w-full max-w-md flex flex-col items-center text-center">
         <img
           src="/assets/bindy.png"
@@ -52,8 +52,8 @@ export function Handoff({ token, value, eventId }: HandoffProps) {
 
         <div className="mt-8 w-full rounded-lg border border-brand-border bg-brand-bg-card p-4">
           <p className="text-sm text-brand-text-secondary">
-            If the link does not open, enter this code in the app under &quot;I already
-            subscribed&quot;:
+            If the link does not open the app, install and open Video2PDF, tap &quot;I already
+            subscribed on the web&quot; on the paywall, then enter this code:
           </p>
           <code className="mt-3 block rounded-lg border border-brand-border bg-brand-bg px-4 py-3 text-lg font-mono tracking-wide">
             {token}
