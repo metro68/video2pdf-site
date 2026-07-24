@@ -1,19 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { Handoff } from "@/app/go/success/components/Handoff";
 import * as pixel from "@/lib/pixel/events";
 
 beforeEach(() => {
   vi.spyOn(pixel, "track").mockImplementation(() => {});
-  Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
 });
 
 describe("Handoff", () => {
-  it("renders the deep link and manual code", () => {
+  it("renders the deep link with the token, without showing the token itself", () => {
     render(<Handoff token="tok_abc" value={4.99} eventId="evt_9" />);
     const link = screen.getByRole("link", { name: /open the app/i });
     expect(link).toHaveAttribute("href", "video2pdf://redeem?token=tok_abc");
-    expect(screen.getByText("tok_abc")).toBeInTheDocument();
+    // The token is deep-link plumbing only; the visible fallback is the email.
+    expect(screen.queryByText("tok_abc")).not.toBeInTheDocument();
+  });
+
+  it("explains the email fallback for other devices", () => {
+    render(<Handoff token="tok_abc" value={4.99} eventId="evt_9" />);
+    expect(
+      screen.getByText(/enter the\s+email you used at checkout/i),
+    ).toBeInTheDocument();
   });
 
   it("fires Purchase with value, currency, and the dedup eventId", () => {
@@ -31,13 +38,5 @@ describe("Handoff", () => {
     render(<Handoff token="tok_abc" value={4.99} eventId="evt_9" />);
     const link = screen.getByRole("link", { name: /manage or cancel anytime/i });
     expect(link).toHaveAttribute("href", "/manage");
-  });
-
-  it("copies the code to the clipboard and shows a confirmation", async () => {
-    render(<Handoff token="tok_abc" value={4.99} eventId="evt_9" />);
-    const copyButton = screen.getByRole("button", { name: /copy code/i });
-    fireEvent.click(copyButton);
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("tok_abc");
-    await waitFor(() => expect(screen.getByText(/copied/i)).toBeInTheDocument());
   });
 });

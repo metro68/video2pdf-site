@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { FUNNEL_CONFIG } from "@/lib/funnel/config";
 import { track } from "@/lib/pixel/events";
 import "../../funnel.css";
@@ -13,7 +13,6 @@ export interface HandoffProps {
 
 export function Handoff({ token, value, eventId }: HandoffProps) {
   const fired = useRef(false);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (fired.current) return;
@@ -21,18 +20,9 @@ export function Handoff({ token, value, eventId }: HandoffProps) {
     track("Purchase", { value, currency: "USD" }, eventId);
   }, [value, eventId]);
 
+  // The token rides along in the deep link so the app can unlock silently; it is
+  // never shown to the user. The visible fallback is their checkout email.
   const href = `${FUNNEL_CONFIG.deepLinkScheme}redeem?token=${token}`;
-
-  async function copyCode() {
-    try {
-      await navigator.clipboard.writeText(token);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard access can fail (permissions, insecure context); the code is
-      // still visible on screen for the user to copy manually.
-    }
-  }
 
   return (
     <main className="min-h-[100dvh] overflow-y-auto bg-brand-bg text-brand-text flex flex-col items-center px-6 pt-10 pb-24">
@@ -52,19 +42,10 @@ export function Handoff({ token, value, eventId }: HandoffProps) {
 
         <div className="mt-8 w-full rounded-lg border border-brand-border bg-brand-bg-card p-4">
           <p className="text-sm text-brand-text-secondary">
-            If the link does not open the app, install and open Video2PDF, tap &quot;I already
-            subscribed on the web&quot; on the paywall, then enter this code:
+            On another device, or the app did not unlock? Install and open Video2PDF,
+            tap &quot;I already subscribed on the web&quot; on the paywall, and enter the
+            email you used at checkout.
           </p>
-          <code className="mt-3 block rounded-lg border border-brand-border bg-brand-bg px-4 py-3 text-lg font-mono tracking-wide">
-            {token}
-          </code>
-          <button
-            type="button"
-            onClick={copyCode}
-            className="mt-3 w-full rounded-lg border border-brand-border px-6 py-3 text-sm font-semibold text-brand-text"
-          >
-            {copied ? "Copied!" : "Copy code"}
-          </button>
         </div>
 
         <a href="/manage" className="mt-6 text-xs text-brand-text-secondary underline">
