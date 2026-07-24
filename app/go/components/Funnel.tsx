@@ -69,7 +69,11 @@ export function Funnel() {
 
   async function startCheckout(plan: "weekly" | "annual") {
     const cents = FUNNEL_CONFIG.plans[plan].cents;
-    track("InitiateCheckout", { value: cents / 100, currency: "USD" });
+    const value = cents / 100;
+    track("InitiateCheckout", { value, currency: "USD" });
+    if (plan === "annual") {
+      track("StartTrial", { value, currency: "USD", predicted_ltv: value });
+    }
     setCheckoutError(null);
     setBusy(true);
     try {

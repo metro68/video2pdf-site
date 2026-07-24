@@ -14,6 +14,15 @@ describe("track", () => {
     });
   });
 
+  it("forwards a StartTrial event with predicted_ltv params", () => {
+    track("StartTrial", { value: 29.99, currency: "USD", predicted_ltv: 29.99 });
+    expect((globalThis as any).fbq).toHaveBeenCalledWith("track", "StartTrial", {
+      value: 29.99,
+      currency: "USD",
+      predicted_ltv: 29.99,
+    });
+  });
+
   it("passes eventID as the 4th arg when provided", () => {
     track("Purchase", { value: 4.99, currency: "USD" }, "evt_1");
     expect((globalThis as any).fbq).toHaveBeenCalledWith(

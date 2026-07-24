@@ -66,6 +66,10 @@ export function Handoff({ token, value, eventId }: HandoffProps) {
             {copied ? "Copied!" : "Copy code"}
           </button>
         </div>
+
+        <a href="/manage" className="mt-6 text-xs text-brand-text-secondary underline">
+          Manage or cancel anytime
+        </a>
       </div>
     </main>
   );

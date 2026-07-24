@@ -99,6 +99,37 @@ describe("Funnel", () => {
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.test/s/1"));
   });
 
+  it("fires StartTrial in addition to InitiateCheckout on annual plan select, since annual is the trial plan", async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    fireEvent.click(await screen.findByRole("button", { name: /3-day free trial.*29\.99/i }));
+    expect(pixel.track).toHaveBeenCalledWith("StartTrial", {
+      value: 29.99,
+      currency: "USD",
+      predicted_ltv: 29.99,
+    });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+  });
+
+  it("does not fire StartTrial on weekly plan select, since weekly has no trial", async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    fireEvent.click(await screen.findByRole("button", { name: /weekly.*4\.99/i }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(pixel.track).not.toHaveBeenCalledWith(
+      "StartTrial",
+      expect.anything(),
+    );
+  });
+
   it("shows an error and re-enables the button when checkout fails to return a url", async () => {
     const assign = vi.fn();
     Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { stripe, PRICE_TO_PLAN } from "@/lib/stripe/client";
 import { mapEventToMutation } from "@/lib/stripe/webhook";
 import { upsertSubscription, mintRedeemToken } from "@/lib/db/subscriptions";
-import { sendCapiPurchase } from "@/lib/pixel/capi";
+import { sendCapiPurchase, sendCapiStartTrial } from "@/lib/pixel/capi";
 import { FUNNEL_CONFIG } from "@/lib/funnel/config";
 import { randomUUID } from "node:crypto";
 
@@ -84,12 +84,16 @@ export async function POST(request: Request): Promise<NextResponse> {
           ? FUNNEL_CONFIG.plans[plan].cents / 100
           : (o.amount_total ?? 0) / 100;
 
-        await sendCapiPurchase({
-          email,
-          value,
-          currency: String(o.currency ?? "usd").toUpperCase(),
-          eventId: sessionId,
-        });
+        const currency = String(o.currency ?? "usd").toUpperCase();
+
+        await sendCapiPurchase({ email, value, currency, eventId: sessionId });
+
+        // StartTrial mirrors the app's Facebook StartTrial signal for the trial plan
+        // only (annual). Reuses the Purchase session-id eventId so browser-side
+        // StartTrial (fired at checkout start) and this CAPI event dedup in Meta.
+        if (plan === "annual") {
+          await sendCapiStartTrial({ email, value, currency, eventId: sessionId });
+        }
       }
     }
   }

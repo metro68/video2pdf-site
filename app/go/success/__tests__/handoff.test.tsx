@@ -27,6 +27,12 @@ describe("Handoff", () => {
     expect(pixel.track).toHaveBeenCalledTimes(1);
   });
 
+  it("shows a footer link to manage or cancel the subscription", () => {
+    render(<Handoff token="tok_abc" value={4.99} eventId="evt_9" />);
+    const link = screen.getByRole("link", { name: /manage or cancel anytime/i });
+    expect(link).toHaveAttribute("href", "/manage");
+  });
+
   it("copies the code to the clipboard and shows a confirmation", async () => {
     render(<Handoff token="tok_abc" value={4.99} eventId="evt_9" />);
     const copyButton = screen.getByRole("button", { name: /copy code/i });

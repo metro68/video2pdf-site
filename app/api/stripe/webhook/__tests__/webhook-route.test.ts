@@ -6,6 +6,7 @@ const {
   upsertSubscription,
   mintRedeemToken,
   sendCapiPurchase,
+  sendCapiStartTrial,
   subscriptionsRetrieve,
   subscriptionsUpdate,
 } = vi.hoisted(() => ({
@@ -13,6 +14,9 @@ const {
   upsertSubscription: vi.fn(async (_input: Record<string, unknown>) => {}),
   mintRedeemToken: vi.fn(async (_email: string, _ttlMs: number, token: string) => token),
   sendCapiPurchase: vi.fn(
+    async (_input: { email: string; value: number; currency: string; eventId: string }) => {},
+  ),
+  sendCapiStartTrial: vi.fn(
     async (_input: { email: string; value: number; currency: string; eventId: string }) => {},
   ),
   subscriptionsRetrieve: vi.fn(async (_id: string) => ({
@@ -34,7 +38,7 @@ vi.mock("@/lib/stripe/client", () => ({
   PRICE_TO_PLAN: { price_weekly: "weekly", price_annual: "annual" },
 }));
 vi.mock("@/lib/db/subscriptions", () => ({ upsertSubscription, mintRedeemToken }));
-vi.mock("@/lib/pixel/capi", () => ({ sendCapiPurchase }));
+vi.mock("@/lib/pixel/capi", () => ({ sendCapiPurchase, sendCapiStartTrial }));
 vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
 
 import { POST } from "@/app/api/stripe/webhook/route";
@@ -44,6 +48,7 @@ beforeEach(() => {
   upsertSubscription.mockClear();
   mintRedeemToken.mockClear();
   sendCapiPurchase.mockClear();
+  sendCapiStartTrial.mockClear();
   subscriptionsRetrieve.mockReset();
   subscriptionsRetrieve.mockResolvedValue({
     metadata: {},
@@ -153,6 +158,91 @@ describe("POST /api/stripe/webhook", () => {
     const arg = sendCapiPurchase.mock.calls[0][0];
     expect(arg.value).toBe(29.99);
     expect(arg.currency).toBe("USD");
+  });
+
+  it("also sends CAPI StartTrial on checkout.session.completed for the annual plan, keyed by the same session id as Purchase", async () => {
+    subscriptionsRetrieve.mockResolvedValue({
+      metadata: {},
+      items: { data: [{ price: { id: "price_annual" } }] },
+    });
+    constructEvent.mockReturnValue({
+      type: "checkout.session.completed",
+      id: "evt_20",
+      data: {
+        object: {
+          id: "cs_test_trial",
+          customer: "cus_5",
+          subscription: "sub_5",
+          customer_details: { email: "a@b.com" },
+          amount_total: 0,
+          currency: "usd",
+          metadata: { email: "a@b.com" },
+        },
+      },
+    });
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+    expect(sendCapiStartTrial).toHaveBeenCalledTimes(1);
+    const arg = sendCapiStartTrial.mock.calls[0][0];
+    expect(arg.email).toBe("a@b.com");
+    expect(arg.value).toBe(29.99);
+    expect(arg.currency).toBe("USD");
+    expect(arg.eventId).toBe("cs_test_trial");
+    // Same event id as the Purchase call, so browser and CAPI StartTrial dedup.
+    const purchaseArg = sendCapiPurchase.mock.calls[0][0];
+    expect(purchaseArg.eventId).toBe(arg.eventId);
+  });
+
+  it("does not send CAPI StartTrial on checkout.session.completed for the weekly plan, since weekly has no trial", async () => {
+    subscriptionsRetrieve.mockResolvedValue({
+      metadata: {},
+      items: { data: [{ price: { id: "price_weekly" } }] },
+    });
+    constructEvent.mockReturnValue({
+      type: "checkout.session.completed",
+      id: "evt_21",
+      data: {
+        object: {
+          id: "cs_test_weekly_notrial",
+          customer: "cus_6",
+          subscription: "sub_6",
+          customer_details: { email: "a@b.com" },
+          amount_total: 499,
+          currency: "usd",
+          metadata: { email: "a@b.com" },
+        },
+      },
+    });
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+    expect(sendCapiPurchase).toHaveBeenCalledTimes(1);
+    expect(sendCapiStartTrial).not.toHaveBeenCalled();
+  });
+
+  it("does not resend CAPI StartTrial on a replayed annual checkout.session.completed", async () => {
+    subscriptionsRetrieve.mockResolvedValue({
+      metadata: { redeem_token: "tok_already_minted" },
+      items: { data: [{ price: { id: "price_annual" } }] },
+    });
+    constructEvent.mockReturnValue({
+      type: "checkout.session.completed",
+      id: "evt_22",
+      data: {
+        object: {
+          id: "cs_test_trial_replay",
+          customer: "cus_5",
+          subscription: "sub_5",
+          customer_details: { email: "a@b.com" },
+          amount_total: 0,
+          currency: "usd",
+          metadata: { email: "a@b.com" },
+        },
+      },
+    });
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+    expect(sendCapiStartTrial).not.toHaveBeenCalled();
+    expect(sendCapiPurchase).not.toHaveBeenCalled();
   });
 
   it("lowercases and trims the email used for the token, subscription metadata, and CAPI identity", async () => {

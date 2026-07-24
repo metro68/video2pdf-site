@@ -1,4 +1,10 @@
-export type PixelEvent = "PageView" | "ViewContent" | "Lead" | "InitiateCheckout" | "Purchase";
+export type PixelEvent =
+  | "PageView"
+  | "ViewContent"
+  | "Lead"
+  | "InitiateCheckout"
+  | "StartTrial"
+  | "Purchase";
 
 export function track(event: PixelEvent, params?: Record<string, unknown>, eventId?: string): void {
   const fbq = (globalThis as { fbq?: (...args: unknown[]) => void }).fbq;
