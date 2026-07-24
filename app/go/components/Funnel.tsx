@@ -233,7 +233,7 @@ export function Funnel() {
   return (
     <Shell step={step}>
       <div className="flex w-full flex-col items-center text-center">
-        <img src="/assets/bindy.png" alt="Bindy the bookworm" className="bindy-float h-auto w-20" />
+        <img src="/assets/bindy.png" alt="Bindy the bookworm" className="bindy-float h-auto w-40" />
         <h2 className="mt-3 text-2xl font-bold">Unlock Video2PDF Pro</h2>
         <p className="mt-2 text-brand-text-secondary">Trusted by {count}+ people.</p>
       </div>
