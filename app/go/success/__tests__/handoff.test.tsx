@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { Handoff } from "@/app/go/success/components/Handoff";
 import * as pixel from "@/lib/pixel/events";
 
@@ -38,5 +38,19 @@ describe("Handoff", () => {
     render(<Handoff token="tok_abc" value={4.99} eventId="evt_9" />);
     const link = screen.getByRole("link", { name: /manage or cancel anytime/i });
     expect(link).toHaveAttribute("href", "/manage");
+  });
+
+  it("falls back to the OneLink store URL when the app does not open", () => {
+    vi.useFakeTimers();
+    const loc = { href: "" };
+    Object.defineProperty(window, "location", { value: loc, writable: true });
+    render(<Handoff token="tok_abc" value={4.99} eventId="evt_9" />);
+    fireEvent.click(screen.getByRole("link", { name: /open the app/i }));
+    expect(loc.href).toBe("video2pdf://redeem?token=tok_abc");
+    vi.advanceTimersByTime(1600);
+    expect(loc.href).toContain("video2pdf.onelink.me");
+    expect(loc.href).toContain("deep_link_value=redeem");
+    expect(loc.href).toContain("deep_link_sub1=tok_abc");
+    vi.useRealTimers();
   });
 });

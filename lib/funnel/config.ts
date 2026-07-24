@@ -1,6 +1,9 @@
 export const FUNNEL_CONFIG = {
   socialProofCount: 12000,
   deepLinkScheme: "video2pdf://",
+  // AppsFlyer OneLink: routes to the right store per device, and carries the
+  // redeem params through install for deferred deep linking.
+  appStoreUrl: "https://video2pdf.onelink.me/sWaT/xqzyhwkx",
   plans: {
     weekly: { price: "$4.99", cents: 499, trialDays: 0, interval: "week" as const },
     annual: { price: "$29.99", cents: 2999, trialDays: 3, interval: "year" as const },
