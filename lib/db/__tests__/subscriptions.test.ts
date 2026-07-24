@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const sqlMock = vi.fn(async (..._a: unknown[]) => ({ rows: [] }));
-vi.mock("@vercel/postgres", () => ({ sql: (...a: unknown[]) => sqlMock(...a) }));
+vi.mock("@/lib/db/client", () => ({ sql: (...a: unknown[]) => sqlMock(...a) }));
 
 import { upsertSubscription, mintRedeemToken } from "@/lib/db/subscriptions";
 
