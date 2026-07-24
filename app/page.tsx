@@ -17,12 +17,12 @@ export default function HomePage() {
             <a href="#pricing">Pricing</a>
             <a href="/manage">Manage</a>
             <TrackedLink
-              href="https://video2pdf.onelink.me/sWaT/xqzyhwkx"
+              href="/go"
               className="nav-cta"
-              event="cta_get_app_clicked"
+              event="cta_start_trial_clicked"
               params={{ location: "nav" }}
             >
-              Get the App
+              Start Free Trial
             </TrackedLink>
           </div>
           <MobileMenu />
@@ -43,13 +43,13 @@ export default function HomePage() {
             </p>
             <div className="store-buttons">
               <TrackedLink
-                href="https://video2pdf.onelink.me/sWaT/xqzyhwkx"
+                href="/go"
                 className="get-app-btn"
                 id="get-app-link"
-                event="cta_get_app_clicked"
+                event="cta_start_trial_clicked"
                 params={{ location: "hero" }}
               >
-                Get the App
+                Start Free Trial
               </TrackedLink>
             </div>
             <p className="platform-note">Free on iPhone and Android</p>

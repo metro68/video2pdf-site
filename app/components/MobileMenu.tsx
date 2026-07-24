@@ -45,14 +45,14 @@ export function MobileMenu() {
             Manage Subscription
           </a>
           <a
-            href="https://video2pdf.onelink.me/sWaT/xqzyhwkx"
+            href="/go"
             className="mobile-menu-cta"
             onClick={() => {
-              trackCustom("cta_get_app_clicked", { location: "mobile_menu" });
+              trackCustom("cta_start_trial_clicked", { location: "mobile_menu" });
               setOpen(false);
             }}
           >
-            Get the App
+            Start Free Trial
           </a>
         </div>
       ) : null}
