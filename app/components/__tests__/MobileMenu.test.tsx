@@ -12,11 +12,11 @@ function openMenu() {
 }
 
 describe("MobileMenu", () => {
-  it("fires cta_get_app_clicked with location mobile_menu when Get the App is clicked", () => {
+  it("fires cta_start_trial_clicked with location mobile_menu when Start Free Trial is clicked", () => {
     render(<MobileMenu />);
     openMenu();
-    fireEvent.click(screen.getByRole("link", { name: /get the app/i }));
-    expect(pixel.trackCustom).toHaveBeenCalledWith("cta_get_app_clicked", { location: "mobile_menu" });
+    fireEvent.click(screen.getByRole("link", { name: /start free trial/i }));
+    expect(pixel.trackCustom).toHaveBeenCalledWith("cta_start_trial_clicked", { location: "mobile_menu" });
   });
 
   it("fires cta_manage_clicked with location mobile_menu when Manage Subscription is clicked", () => {
