@@ -1,4 +1,5 @@
 import "./home.css";
+import { MobileMenu } from "./components/MobileMenu";
 
 export default function HomePage() {
   return (
@@ -13,10 +14,12 @@ export default function HomePage() {
             <a href="#how-it-works">How It Works</a>
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
+            <a href="/manage">Manage</a>
             <a href="https://video2pdf.onelink.me/sWaT/xqzyhwkx" className="nav-cta">
               Get the App
             </a>
           </div>
+          <MobileMenu />
         </div>
       </nav>
 
