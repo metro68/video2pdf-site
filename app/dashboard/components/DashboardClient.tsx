@@ -14,7 +14,7 @@ interface MetricResponse {
   data: Record<string, number> | null;
 }
 
-const PROVIDERS = ["appstore", "play", "posthog", "appsflyer", "meta", "tiktok"] as const;
+const PROVIDERS = ["appstore", "play", "posthog", "appsflyer", "meta", "tiktok", "stripe"] as const;
 type Provider = (typeof PROVIDERS)[number];
 const PROVIDER_LABEL: Record<Provider, string> = {
   appstore: "App Store",
@@ -23,6 +23,7 @@ const PROVIDER_LABEL: Record<Provider, string> = {
   appsflyer: "AppsFlyer",
   meta: "Meta",
   tiktok: "TikTok",
+  stripe: "Stripe",
 };
 
 // Console links so a viewer can open the source and sanity-check each figure.
@@ -33,6 +34,7 @@ const CONSOLE = {
   meta: { name: "Meta Ads", href: "https://business.facebook.com/adsmanager" },
   tiktok: { name: "TikTok Ads", href: "https://ads.tiktok.com" },
   appsflyer: { name: "AppsFlyer", href: "https://hq1.appsflyer.com" },
+  stripe: { name: "Stripe Dashboard", href: "https://dashboard.stripe.com/subscriptions" },
 } as const;
 
 export default function DashboardClient({ role }: { role: Role }) {
@@ -89,6 +91,7 @@ export default function DashboardClient({ role }: { role: Role }) {
   const appstoreSubs = num("appstore", "paidSubs");
   const subsKnown = appstoreSubs !== undefined;
   const mrr = (num("appstore", "mrr") ?? 0) + (num("play", "mrr") ?? 0);
+  const webFreeTrials = num("stripe", "webFreeTrials");
   const adSpend =
     (num("meta", "adSpend") ?? 0) +
     (num("tiktok", "adSpend") ?? 0) +
@@ -151,6 +154,12 @@ export default function DashboardClient({ role }: { role: Role }) {
             description={`Total ad spend in ${monthLabel} across Meta, TikTok, and AppsFlyer-tracked partners. $0 means no spend or no active campaigns.`}
             sources={[CONSOLE.meta, CONSOLE.tiktok, CONSOLE.appsflyer]}
           />
+          <KpiTile
+            label="Web free trials"
+            value={webFreeTrials != null ? webFreeTrials.toLocaleString() : "n/a"}
+            description={`Free trials started on the web funnel via Stripe in ${monthLabel}. Each trial is a Stripe subscription that entered its trial period this month.`}
+            sources={[CONSOLE.stripe]}
+          />
           {role === "admin" ? (
             <KpiTile
               label="MRR"
@@ -191,10 +200,22 @@ export default function DashboardClient({ role }: { role: Role }) {
           </section>
         ) : null}
 
-        <section className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {PROVIDERS.map((p) => (
-            <FreshnessLine key={p} asOf={metrics[p]?.asOf ?? null} source={PROVIDER_LABEL[p]} />
-          ))}
+        <section>
+          <h2 className="text-sm font-semibold text-brand-text">Data sources</h2>
+          <p className="mb-3 text-xs text-brand-text-secondary">
+            When each source last refreshed. If a source shows an old timestamp or an error, its
+            numbers above may be stale or missing.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {PROVIDERS.map((p) => (
+              <FreshnessLine
+                key={p}
+                asOf={metrics[p]?.asOf ?? null}
+                source={PROVIDER_LABEL[p]}
+                status={metrics[p]?.status}
+              />
+            ))}
+          </div>
         </section>
       </div>
     </main>

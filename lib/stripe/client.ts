@@ -26,6 +26,13 @@ export const stripe: Stripe = new Proxy({} as Stripe, {
   },
 });
 
+// Function form of the lazy singleton above, for callers that prefer calling
+// a getter over importing a Proxy-backed constant (e.g. connectors, which are
+// unit tested by mocking this module).
+export function getStripe(): Stripe {
+  return realStripe();
+}
+
 // Read the price-to-plan mapping at access time (env is not reliably present at
 // build time). A Proxy keeps the `PRICE_TO_PLAN[priceId]` call sites unchanged.
 export const PRICE_TO_PLAN: Record<string, Plan> = new Proxy(
