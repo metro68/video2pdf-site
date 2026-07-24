@@ -401,7 +401,7 @@ export default function HomePage() {
           gap: 10px;
         }
         .pricing-card li::before {
-          content: "\\2713";
+          content: "\2713";
           color: var(--primary-light);
           font-weight: 700;
         }
