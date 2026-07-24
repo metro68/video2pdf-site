@@ -50,22 +50,26 @@ export async function POST(request: Request): Promise<NextResponse> {
       }
 
       if (!alreadyProcessed) {
-        const subPriceId = subscription?.items?.data?.[0]?.price?.id;
+        const subItem = subscription?.items?.data?.[0];
+        const subPriceId = subItem?.price?.id;
         const plan = subPriceId ? PRICE_TO_PLAN[subPriceId] : undefined;
 
         // redeem_tokens.email has an FK to subscriptions(email). checkout.session.completed
-        // can arrive before the customer.subscription.* event that normally upserts the
-        // subscriptions row, so upsert a minimal row here first to satisfy the FK. The
-        // authoritative status/current_period_end is corrected by the subsequent
-        // customer.subscription.* event via the existing ON CONFLICT upsert.
+        // can arrive before the customer.subscription.* event, so we upsert the row here.
+        // Populate the real period/trial dates from the subscription we already retrieved
+        // (current_period_end lives on the subscription item in the pinned apiVersion,
+        // trial_end on the root), so a redeem right after checkout has a numeric expiry
+        // instead of waiting on the separate customer.subscription.* event.
+        const secToMs = (v: unknown): number | null =>
+          typeof v === "number" ? v * 1000 : null;
         await upsertSubscription({
           email,
           stripeCustomerId: o.customer ?? null,
           stripeSubscriptionId: o.subscription ?? null,
           plan: plan ?? "weekly",
-          status: "trialing",
-          currentPeriodEnd: null,
-          trialEnd: null,
+          status: (subscription?.status as string) === "active" ? "active" : "trialing",
+          currentPeriodEnd: secToMs(subItem?.current_period_end),
+          trialEnd: secToMs(subscription?.trial_end),
         });
 
         const token = generateRedeemCode();
