@@ -202,7 +202,7 @@ export default function HomePage() {
               <li>No watermarks</li>
               <li>Private on-device processing</li>
             </ul>
-            <a href="https://video2pdf.onelink.me/sWaT/xqzyhwkx" className="cta-btn">
+            <a href="/go" className="cta-btn">
               Start Your Free Trial
             </a>
             <p className="pricing-fine">
