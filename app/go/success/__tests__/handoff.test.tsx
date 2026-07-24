@@ -8,10 +8,14 @@ beforeEach(() => {
 });
 
 describe("Handoff", () => {
-  it("renders the deep link with the token, without showing the token itself", () => {
+  it("links to OneLink with the redeem params, without showing the token itself", () => {
     render(<Handoff token="tok_abc" value={4.99} eventId="evt_9" />);
     const link = screen.getByRole("link", { name: /open the app/i });
-    expect(link).toHaveAttribute("href", "video2pdf://redeem?token=tok_abc");
+    const href = link.getAttribute("href") ?? "";
+    expect(href).toContain("video2pdf.onelink.me");
+    expect(href).toContain("deep_link_value=redeem");
+    expect(href).toContain("deep_link_sub1=tok_abc");
+    expect(href).toContain(encodeURIComponent("video2pdf://redeem?token=tok_abc"));
     // The token is deep-link plumbing only; the visible fallback is the email.
     expect(screen.queryByText("tok_abc")).not.toBeInTheDocument();
   });
@@ -40,17 +44,4 @@ describe("Handoff", () => {
     expect(link).toHaveAttribute("href", "/manage");
   });
 
-  it("falls back to the OneLink store URL when the app does not open", () => {
-    vi.useFakeTimers();
-    const loc = { href: "" };
-    Object.defineProperty(window, "location", { value: loc, writable: true });
-    render(<Handoff token="tok_abc" value={4.99} eventId="evt_9" />);
-    fireEvent.click(screen.getByRole("link", { name: /open the app/i }));
-    expect(loc.href).toBe("video2pdf://redeem?token=tok_abc");
-    vi.advanceTimersByTime(1600);
-    expect(loc.href).toContain("video2pdf.onelink.me");
-    expect(loc.href).toContain("deep_link_value=redeem");
-    expect(loc.href).toContain("deep_link_sub1=tok_abc");
-    vi.useRealTimers();
-  });
 });

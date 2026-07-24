@@ -20,35 +20,16 @@ export function Handoff({ token, value, eventId }: HandoffProps) {
     track("Purchase", { value, currency: "USD" }, eventId);
   }, [value, eventId]);
 
-  // The token rides along in the deep link so the app can unlock silently; it is
-  // never shown to the user. The visible fallback is their checkout email.
-  const href = `${FUNNEL_CONFIG.deepLinkScheme}redeem?token=${token}`;
-
-  // With the app installed the scheme opens it instantly. Without it, the scheme
-  // errors, so after a short wait (page still visible = app did not open) we send
-  // the user to the store via OneLink, carrying the redeem params so AppsFlyer
-  // deferred deep linking can still unlock silently on first open after install.
-  const storeFallbackUrl =
+  // OneLink universal link: opens the installed app directly (no custom-scheme
+  // error dialog), or the right store when the app is missing. The redeem params
+  // ride along so the app (or AppsFlyer deferred deep linking after install)
+  // unlocks silently; the token is never shown to the user. af_dp carries the
+  // scheme URL as a fallback for installed apps without universal-link support.
+  const schemeUrl = `${FUNNEL_CONFIG.deepLinkScheme}redeem?token=${token}`;
+  const href =
     `${FUNNEL_CONFIG.appStoreUrl}?deep_link_value=redeem` +
     `&deep_link_sub1=${encodeURIComponent(token)}` +
-    `&af_dp=${encodeURIComponent(href)}`;
-
-  function openApp(e: React.MouseEvent<HTMLAnchorElement>) {
-    e.preventDefault();
-    const fallback = setTimeout(() => {
-      if (!document.hidden) window.location.href = storeFallbackUrl;
-    }, 1600);
-    const cancel = () => clearTimeout(fallback);
-    window.addEventListener("pagehide", cancel, { once: true });
-    document.addEventListener(
-      "visibilitychange",
-      () => {
-        if (document.hidden) cancel();
-      },
-      { once: true },
-    );
-    window.location.href = href;
-  }
+    `&af_dp=${encodeURIComponent(schemeUrl)}`;
 
   return (
     <main className="min-h-[100dvh] overflow-y-auto bg-brand-bg text-brand-text flex flex-col items-center px-6 pt-10 pb-24">
@@ -61,7 +42,6 @@ export function Handoff({ token, value, eventId }: HandoffProps) {
         <h1 className="mt-4 text-2xl font-bold">You are subscribed. Get the app.</h1>
         <a
           href={href}
-          onClick={openApp}
           className="mt-8 w-full rounded-lg bg-brand-primary px-8 py-4 text-base font-semibold text-white"
         >
           Open the app
