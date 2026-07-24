@@ -217,6 +217,7 @@ export default function HomePage() {
             Video2PDF
           </div>
           <div className="footer-links">
+            <a href="/manage">Manage Subscription</a>
             <a href="/privacy">Privacy Policy</a>
             <a href="/terms">Terms of Service</a>
             <a href="/delete-account">Delete Your Data</a>
