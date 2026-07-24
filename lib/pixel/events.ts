@@ -17,3 +17,9 @@ export function track(event: PixelEvent, params?: Record<string, unknown>, event
     fbq("track", event);
   }
 }
+
+export function trackCustom(name: string, params?: Record<string, unknown>): void {
+  const fbq = (globalThis as { fbq?: (...args: unknown[]) => void }).fbq;
+  if (typeof fbq !== "function") return;
+  fbq("trackCustom", name, params ?? {});
+}

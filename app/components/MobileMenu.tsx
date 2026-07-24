@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackCustom } from "@/lib/pixel/events";
 
 // Mobile burger menu for the homepage header. The header nav links are hidden on
 // small screens, so without this a phone visitor cannot reach How It Works,
@@ -34,13 +35,22 @@ export function MobileMenu() {
           <a href="#pricing" onClick={() => setOpen(false)}>
             Pricing
           </a>
-          <a href="/manage" onClick={() => setOpen(false)}>
+          <a
+            href="/manage"
+            onClick={() => {
+              trackCustom("cta_manage_clicked", { location: "mobile_menu" });
+              setOpen(false);
+            }}
+          >
             Manage Subscription
           </a>
           <a
             href="https://video2pdf.onelink.me/sWaT/xqzyhwkx"
             className="mobile-menu-cta"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              trackCustom("cta_get_app_clicked", { location: "mobile_menu" });
+              setOpen(false);
+            }}
           >
             Get the App
           </a>

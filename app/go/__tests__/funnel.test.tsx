@@ -13,6 +13,7 @@ vi.stubGlobal("fetch", fetchMock);
 beforeEach(() => {
   fetchMock.mockClear();
   vi.spyOn(pixel, "track").mockImplementation(() => {});
+  vi.spyOn(pixel, "trackCustom").mockImplementation(() => {});
 });
 
 function goToQualify() {
@@ -37,6 +38,112 @@ describe("Funnel", () => {
   it("fires ViewContent on mount", () => {
     render(<Funnel />);
     expect(pixel.track).toHaveBeenCalledWith("ViewContent");
+  });
+
+  it("fires funnel_opened with source direct when no src query param is present", () => {
+    render(<Funnel />);
+    expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_opened", { source: "direct" });
+  });
+
+  it("fires funnel_opened with the src query param when present", () => {
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      value: { ...originalLocation, search: "?src=meta_ad_1" },
+      writable: true,
+    });
+    render(<Funnel />);
+    expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_opened", { source: "meta_ad_1" });
+    Object.defineProperty(window, "location", { value: originalLocation, writable: true });
+  });
+
+  it("fires funnel_get_started on landing CTA click", () => {
+    render(<Funnel />);
+    goToQualify();
+    expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_get_started");
+  });
+
+  it("fires funnel_scan_type_selected and funnel_qualify1_completed through qualify1", () => {
+    render(<Funnel />);
+    goToQualify();
+    fireEvent.click(screen.getByRole("button", { name: /documents/i }));
+    expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_scan_type_selected", {
+      scan_type: "Documents",
+    });
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_qualify1_completed", {
+      scan_type: "Documents",
+    });
+  });
+
+  it("fires funnel_frequency_selected and funnel_qualify2_completed through qualify2", () => {
+    render(<Funnel />);
+    goToQualify();
+    fireEvent.click(screen.getByRole("button", { name: /documents/i }));
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    fireEvent.click(screen.getByRole("button", { name: /weekly/i }));
+    expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_frequency_selected", {
+      frequency: "Weekly",
+    });
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_qualify2_completed", {
+      frequency: "Weekly",
+    });
+  });
+
+  it("fires funnel_email_step_viewed when the email step is shown", () => {
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_email_step_viewed");
+  });
+
+  it("fires funnel_email_submitted alongside Lead", () => {
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_email_submitted");
+  });
+
+  it("fires funnel_paywall_viewed when the paywall step is shown", () => {
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_paywall_viewed");
+  });
+
+  it("fires funnel_plan_selected, funnel_checkout_redirect on weekly plan select", async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", { value: { assign, href: "", search: "" }, writable: true });
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    fireEvent.click(await screen.findByRole("button", { name: /weekly.*4\.99/i }));
+    expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_plan_selected", {
+      plan: "weekly",
+      value: 4.99,
+    });
+    await waitFor(() =>
+      expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_checkout_redirect", { plan: "weekly" })
+    );
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.test/s/1"));
+  });
+
+  it("fires funnel_checkout_error when checkout fails to return a url", async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", { value: { assign, href: "", search: "" }, writable: true });
+    fetchMock.mockImplementationOnce(async () => ({ json: async () => ({}) }));
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    const weeklyButton = await screen.findByRole("button", { name: /weekly.*4\.99/i });
+    fireEvent.click(weeklyButton);
+    await waitFor(() =>
+      expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_checkout_error", { plan: "weekly" })
+    );
   });
 
   it("renders the qualify taps and lets the user select an option", () => {

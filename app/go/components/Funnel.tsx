@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FUNNEL_CONFIG, finePrint } from "@/lib/funnel/config";
-import { track } from "@/lib/pixel/events";
+import { track, trackCustom } from "@/lib/pixel/events";
 import "../funnel.css";
 
 type Step = "landing" | "qualify1" | "qualify2" | "email" | "paywall";
@@ -65,7 +65,17 @@ export function Funnel() {
 
   useEffect(() => {
     track("ViewContent");
+    const source = new URLSearchParams(window.location.search).get("src") ?? "direct";
+    trackCustom("funnel_opened", { source });
   }, []);
+
+  useEffect(() => {
+    if (step === "email") {
+      trackCustom("funnel_email_step_viewed");
+    } else if (step === "paywall") {
+      trackCustom("funnel_paywall_viewed");
+    }
+  }, [step]);
 
   async function startCheckout(plan: "weekly" | "annual") {
     const cents = FUNNEL_CONFIG.plans[plan].cents;
@@ -74,6 +84,7 @@ export function Funnel() {
     if (plan === "annual") {
       track("StartTrial", { value, currency: "USD", predicted_ltv: value });
     }
+    trackCustom("funnel_plan_selected", { plan, value });
     setCheckoutError(null);
     setBusy(true);
     try {
@@ -83,16 +94,20 @@ export function Funnel() {
         body: JSON.stringify({ plan, email }),
       });
       if (res.ok === false) {
+        trackCustom("funnel_checkout_error", { plan });
         setCheckoutError("Something went wrong starting checkout. Please try again.");
         return;
       }
       const { url } = await res.json();
       if (url) {
+        trackCustom("funnel_checkout_redirect", { plan });
         window.location.assign(url);
       } else {
+        trackCustom("funnel_checkout_error", { plan });
         setCheckoutError("Something went wrong starting checkout. Please try again.");
       }
     } catch {
+      trackCustom("funnel_checkout_error", { plan });
       setCheckoutError("Something went wrong starting checkout. Please try again.");
     } finally {
       setBusy(false);
@@ -112,7 +127,10 @@ export function Funnel() {
           Join {count}+ people scanning smarter.
         </p>
         <button
-          onClick={() => setStep("qualify1")}
+          onClick={() => {
+            trackCustom("funnel_get_started");
+            setStep("qualify1");
+          }}
           className="mt-8 w-full rounded-lg bg-brand-primary px-8 py-4 text-base font-semibold text-white"
         >
           Get started
@@ -136,7 +154,10 @@ export function Funnel() {
           {SCAN_TYPES.map((type) => (
             <button
               key={type}
-              onClick={() => setScanType(type)}
+              onClick={() => {
+                setScanType(type);
+                trackCustom("funnel_scan_type_selected", { scan_type: type });
+              }}
               aria-pressed={scanType === type}
               className={`rounded-lg border px-4 py-4 text-sm font-medium ${
                 scanType === type
@@ -150,7 +171,10 @@ export function Funnel() {
         </div>
         <button
           disabled={!scanType}
-          onClick={() => setStep("qualify2")}
+          onClick={() => {
+            trackCustom("funnel_qualify1_completed", { scan_type: scanType });
+            setStep("qualify2");
+          }}
           className="mt-8 w-full rounded-lg bg-brand-primary px-8 py-4 text-base font-semibold text-white disabled:opacity-40"
         >
           Continue
@@ -174,7 +198,10 @@ export function Funnel() {
           {FREQUENCIES.map((freq) => (
             <button
               key={freq}
-              onClick={() => setFrequency(freq)}
+              onClick={() => {
+                setFrequency(freq);
+                trackCustom("funnel_frequency_selected", { frequency: freq });
+              }}
               aria-pressed={frequency === freq}
               className={`rounded-lg border px-4 py-4 text-sm font-medium ${
                 frequency === freq
@@ -188,7 +215,10 @@ export function Funnel() {
         </div>
         <button
           disabled={!frequency}
-          onClick={() => setStep("email")}
+          onClick={() => {
+            trackCustom("funnel_qualify2_completed", { frequency });
+            setStep("email");
+          }}
           className="mt-8 w-full rounded-lg bg-brand-primary px-8 py-4 text-base font-semibold text-white disabled:opacity-40"
         >
           Continue
@@ -220,6 +250,7 @@ export function Funnel() {
           disabled={!email}
           onClick={() => {
             track("Lead");
+            trackCustom("funnel_email_submitted");
             setStep("paywall");
           }}
           className="mt-6 w-full rounded-lg bg-brand-primary px-8 py-4 text-base font-semibold text-white disabled:opacity-40"

@@ -1,5 +1,6 @@
 import "./home.css";
 import { MobileMenu } from "./components/MobileMenu";
+import { TrackedLink } from "./components/TrackedLink";
 
 export default function HomePage() {
   return (
@@ -15,9 +16,14 @@ export default function HomePage() {
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
             <a href="/manage">Manage</a>
-            <a href="https://video2pdf.onelink.me/sWaT/xqzyhwkx" className="nav-cta">
+            <TrackedLink
+              href="https://video2pdf.onelink.me/sWaT/xqzyhwkx"
+              className="nav-cta"
+              event="cta_get_app_clicked"
+              params={{ location: "nav" }}
+            >
               Get the App
-            </a>
+            </TrackedLink>
           </div>
           <MobileMenu />
         </div>
@@ -36,13 +42,15 @@ export default function HomePage() {
               searchable, shareable PDF in seconds.
             </p>
             <div className="store-buttons">
-              <a
+              <TrackedLink
                 href="https://video2pdf.onelink.me/sWaT/xqzyhwkx"
                 className="get-app-btn"
                 id="get-app-link"
+                event="cta_get_app_clicked"
+                params={{ location: "hero" }}
               >
                 Get the App
-              </a>
+              </TrackedLink>
             </div>
             <p className="platform-note">Free on iPhone and Android</p>
             <p className="hero-note">Free for 3 days, then $29.99/year. Cancel anytime.</p>
@@ -202,9 +210,14 @@ export default function HomePage() {
               <li>No watermarks</li>
               <li>Private on-device processing</li>
             </ul>
-            <a href="/go" className="cta-btn">
+            <TrackedLink
+              href="/go"
+              className="cta-btn"
+              event="cta_start_trial_clicked"
+              params={{ location: "pricing" }}
+            >
               Start Your Free Trial
-            </a>
+            </TrackedLink>
             <p className="pricing-fine">
               3 days free, then $29.99/year. Cancel anytime before the trial ends and you won&apos;t
               be charged.
@@ -220,7 +233,9 @@ export default function HomePage() {
             Video2PDF
           </div>
           <div className="footer-links">
-            <a href="/manage">Manage Subscription</a>
+            <TrackedLink href="/manage" event="cta_manage_clicked" params={{ location: "footer" }}>
+              Manage Subscription
+            </TrackedLink>
             <a href="/privacy">Privacy Policy</a>
             <a href="/terms">Terms of Service</a>
             <a href="/delete-account">Delete Your Data</a>
