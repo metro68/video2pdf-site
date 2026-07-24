@@ -36,12 +36,9 @@ function loadEnvLocal() {
 async function main() {
   loadEnvLocal();
 
-  // @vercel/postgres reads POSTGRES_URL. Accept DATABASE_URL as a fallback so a
-  // server-style connection string works too.
-  if (!process.env.POSTGRES_URL && process.env.DATABASE_URL) {
-    process.env.POSTGRES_URL = process.env.DATABASE_URL;
-  }
-  if (!process.env.POSTGRES_URL) {
+  // Use POSTGRES_URL (Supabase-injected by Vercel), or DATABASE_URL as a fallback.
+  let connectionString = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
+  if (!connectionString) {
     console.error(
       "No POSTGRES_URL found. Provision the database in Vercel Storage and either\n" +
         "run `vercel env pull .env.local`, or paste POSTGRES_URL into .env.local, then retry.",
@@ -49,14 +46,30 @@ async function main() {
     process.exit(1);
   }
 
+  // Strip sslmode from the URL so our explicit ssl config applies (same as the app
+  // client). We connect with the pg driver, not @vercel/postgres, which is Neon-only
+  // and cannot reach Supabase.
+  try {
+    const url = new URL(connectionString);
+    url.searchParams.delete("sslmode");
+    connectionString = url.toString();
+  } catch {
+    // Not a parseable URL; use as-is.
+  }
+
   const schemaPath = join(root, "lib", "db", "schema.sql");
   const schema = readFileSync(schemaPath, "utf8");
 
-  const { sql } = await import("@vercel/postgres");
+  const { default: pg } = await import("pg");
+  const client = new pg.Client({
+    connectionString,
+    ssl: { rejectUnauthorized: false },
+  });
+  await client.connect();
 
   // schema.sql is idempotent (CREATE TABLE IF NOT EXISTS / CREATE INDEX IF NOT EXISTS).
-  // Execute the whole file as one statement batch.
-  await sql.query(schema);
+  await client.query(schema);
+  await client.end();
 
   console.log("Schema applied: subscriptions + redeem_tokens are ready.");
   process.exit(0);
