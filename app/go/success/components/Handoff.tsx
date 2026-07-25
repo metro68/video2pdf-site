@@ -42,13 +42,15 @@ export function Handoff({ token, value, eventId }: HandoffProps) {
           Open the app
         </a>
 
-        <div className="mt-8 w-full rounded-lg border border-brand-border bg-brand-bg-card p-4">
-          <p className="text-sm text-brand-text-secondary">
-            On another device, or the app did not unlock? Install and open Video2PDF,
-            tap &quot;I already subscribed on the web&quot; on the paywall, and enter the
-            email you used at checkout.
+        <details className="mt-8 w-full rounded-lg border border-brand-border bg-brand-bg-card p-4 text-left">
+          <summary className="cursor-pointer text-sm font-medium text-brand-text-secondary">
+            Trouble opening the app, or on another device?
+          </summary>
+          <p className="mt-3 text-sm text-brand-text-secondary">
+            Install and open Video2PDF, tap &quot;I already subscribed on the web&quot;
+            on the paywall, and enter the email you used at checkout.
           </p>
-        </div>
+        </details>
 
         <a href="/manage" className="mt-6 text-xs text-brand-text-secondary underline">
           Manage or cancel anytime
