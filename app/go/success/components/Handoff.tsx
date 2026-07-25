@@ -51,10 +51,6 @@ export function Handoff({ token, value, eventId }: HandoffProps) {
             on the paywall, and enter the email you used at checkout.
           </p>
         </details>
-
-        <a href="/manage" className="mt-6 text-xs text-brand-text-secondary underline">
-          Manage or cancel anytime
-        </a>
       </div>
     </main>
   );
