@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.vid2pdf.app",
+      "sha256_cert_fingerprints": [
+        "D5:8A:5D:3B:03:65:22:65:8A:B8:2A:61:D0:DF:47:DA:25:A3:40:49:EE:3B:62:0B:14:D9:A2:4A:DA:13:E4:01",
+        "3A:60:5F:4E:3B:1F:51:1C:AD:8B:24:19:72:42:36:E8:05:6B:95:80:CA:BC:D1:3B:7C:D4:3D:3F:43:4B:F0:DB"
+      ]
+    }
+  }
+]

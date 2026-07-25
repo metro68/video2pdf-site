@@ -4,6 +4,9 @@ export const FUNNEL_CONFIG = {
   // AppsFlyer OneLink: routes to the right store per device, and carries the
   // redeem params through install for deferred deep linking.
   appStoreUrl: "https://video2pdf.onelink.me/sWaT/xqzyhwkx",
+  // Our own universal-link host (AASA served by this site). Must differ from the
+  // page's host (www) or iOS suppresses same-domain universal links.
+  appLinkBase: "https://app.video2pdf.ai",
   plans: {
     weekly: { price: "$4.99", cents: 499, trialDays: 0, interval: "week" as const },
     annual: { price: "$29.99", cents: 2999, trialDays: 3, interval: "year" as const },

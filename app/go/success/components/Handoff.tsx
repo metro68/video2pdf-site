@@ -20,16 +20,11 @@ export function Handoff({ token, value, eventId }: HandoffProps) {
     track("Purchase", { value, currency: "USD" }, eventId);
   }, [value, eventId]);
 
-  // OneLink universal link: opens the installed app directly (no custom-scheme
-  // error dialog), or the right store when the app is missing. The redeem params
-  // ride along so the app (or AppsFlyer deferred deep linking after install)
-  // unlocks silently; the token is never shown to the user. af_dp carries the
-  // scheme URL as a fallback for installed apps without universal-link support.
-  const schemeUrl = `${FUNNEL_CONFIG.deepLinkScheme}redeem?token=${token}`;
-  const href =
-    `${FUNNEL_CONFIG.appStoreUrl}?deep_link_value=redeem` +
-    `&deep_link_sub1=${encodeURIComponent(token)}` +
-    `&af_dp=${encodeURIComponent(schemeUrl)}`;
+  // Our own universal link (AASA served by this site on a separate host so iOS
+  // does not suppress it as same-domain): installed app opens directly with the
+  // token; without the app, the /open page forwards to the OneLink store link
+  // with the redeem params for deferred deep linking. Token never shown.
+  const href = `${FUNNEL_CONFIG.appLinkBase}/open?token=${encodeURIComponent(token)}`;
 
   return (
     <main className="min-h-[100dvh] overflow-y-auto bg-brand-bg text-brand-text flex flex-col items-center px-6 pt-10 pb-24">

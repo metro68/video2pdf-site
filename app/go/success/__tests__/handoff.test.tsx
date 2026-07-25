@@ -8,14 +8,10 @@ beforeEach(() => {
 });
 
 describe("Handoff", () => {
-  it("links to OneLink with the redeem params, without showing the token itself", () => {
+  it("links to our universal-link host with the token, without showing the token itself", () => {
     render(<Handoff token="tok_abc" value={4.99} eventId="evt_9" />);
     const link = screen.getByRole("link", { name: /open the app/i });
-    const href = link.getAttribute("href") ?? "";
-    expect(href).toContain("video2pdf.onelink.me");
-    expect(href).toContain("deep_link_value=redeem");
-    expect(href).toContain("deep_link_sub1=tok_abc");
-    expect(href).toContain(encodeURIComponent("video2pdf://redeem?token=tok_abc"));
+    expect(link).toHaveAttribute("href", "https://app.video2pdf.ai/open?token=tok_abc");
     // The token is deep-link plumbing only; the visible fallback is the email.
     expect(screen.queryByText("tok_abc")).not.toBeInTheDocument();
   });

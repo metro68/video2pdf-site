@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "DL96C5MG9R.com.vid2pdf.app",
+        "appIDs": ["DL96C5MG9R.com.vid2pdf.app"],
+        "paths": ["/open*"],
+        "components": [{ "/": "/open*" }]
+      }
+    ]
+  }
+}
