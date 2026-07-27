@@ -72,17 +72,29 @@ export async function POST(request: Request): Promise<NextResponse> {
           trialEnd: secToMs(subscription?.trial_end),
         });
 
+        // _fbp/_fbc were stashed in session metadata by /api/checkout. They are
+        // persisted onto the subscription's metadata too so the invoice.paid
+        // Purchase (trial conversion / renewals, days or months later) can still
+        // match the originating click and browser.
+        const fbp = typeof o?.metadata?.fbp === "string" ? o.metadata.fbp : undefined;
+        const fbc = typeof o?.metadata?.fbc === "string" ? o.metadata.fbc : undefined;
+
         const token = generateRedeemCode();
         await mintRedeemToken(email, redeemTtlMs, token);
         if (o.subscription) {
           await stripe.subscriptions.update(o.subscription, {
-            metadata: { redeem_token: token, email },
+            metadata: {
+              redeem_token: token,
+              email,
+              ...(fbp ? { fbp } : {}),
+              ...(fbc ? { fbc } : {}),
+            },
           });
         }
 
-        // Purchase value must be the plan's catalog value, not amount_total: the trial
-        // is on the annual plan, so amount_total is 0 at checkout.session.completed for
-        // annual and would otherwise report a $0 Purchase. Fall back to amount_total
+        // Event value is the plan's catalog value, not amount_total: the trial
+        // is on the annual plan, so amount_total is 0 at checkout.session.completed
+        // for annual and would otherwise report $0. Fall back to amount_total
         // only if the plan cannot be determined.
         const value = plan
           ? FUNNEL_CONFIG.plans[plan].cents / 100
@@ -90,19 +102,55 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         const currency = String(o.currency ?? "usd").toUpperCase();
 
-        // _fbp/_fbc were stashed in session metadata by /api/checkout so these
-        // server-side events can match the originating click and browser.
-        const fbp = typeof o?.metadata?.fbp === "string" ? o.metadata.fbp : undefined;
-        const fbc = typeof o?.metadata?.fbc === "string" ? o.metadata.fbc : undefined;
-
-        await sendCapiPurchase({ email, value, currency, eventId: sessionId, fbp, fbc });
-
-        // StartTrial mirrors the app's Facebook StartTrial signal for the trial plan
-        // only (annual). Reuses the Purchase session-id eventId so the browser
-        // StartTrial (fired on the success page) and this CAPI event dedup in Meta.
-        if (plan === "annual") {
+        // Purchase means "card actually charged" everywhere (matching the app):
+        // a trial checkout sends StartTrial only; its Purchase fires from
+        // invoice.paid when Stripe collects the first real payment. A no-trial
+        // plan is charged right here, so it sends Purchase now. Both reuse the
+        // session id as eventID to dedup against the success page's browser event.
+        const isTrialPlan = plan ? FUNNEL_CONFIG.plans[plan].trialDays > 0 : false;
+        if (isTrialPlan) {
           await sendCapiStartTrial({ email, value, currency, eventId: sessionId, fbp, fbc });
+        } else {
+          await sendCapiPurchase({ email, value, currency, eventId: sessionId, fbp, fbc });
         }
+      }
+    }
+  }
+
+  if (event.type === "invoice.paid") {
+    // A real charge landed: the trial converting, or any renewal. This is the
+    // only place a trial plan ever produces a Purchase, keeping "Purchase =
+    // money charged" uniform with the app. The invoice id is the eventID, so
+    // Stripe webhook retries dedup in Meta.
+    // Dynamic Stripe Invoice payload; only the fields we need are read here.
+    const o: any = event.data.object;
+    const subscriptionId =
+      o?.subscription ?? o?.parent?.subscription_details?.subscription ?? null;
+    const amountPaid = typeof o?.amount_paid === "number" ? o.amount_paid : 0;
+    // billing_reason subscription_create is the checkout-time invoice: a
+    // no-trial plan's first charge is already reported (deduped with the
+    // browser event) and a trial's is $0.
+    if (subscriptionId && amountPaid > 0 && o?.billing_reason !== "subscription_create") {
+      // Dynamic Stripe Subscription payload; only metadata is read here.
+      const subscription: any = await stripe.subscriptions.retrieve(String(subscriptionId));
+      const rawEmail = o?.customer_email ?? subscription?.metadata?.email;
+      const email =
+        typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+      if (email) {
+        await sendCapiPurchase({
+          email,
+          value: amountPaid / 100,
+          currency: String(o?.currency ?? "usd").toUpperCase(),
+          eventId: String(o?.id ?? ""),
+          fbp:
+            typeof subscription?.metadata?.fbp === "string"
+              ? subscription.metadata.fbp
+              : undefined,
+          fbc:
+            typeof subscription?.metadata?.fbc === "string"
+              ? subscription.metadata.fbc
+              : undefined,
+        });
       }
     }
   }

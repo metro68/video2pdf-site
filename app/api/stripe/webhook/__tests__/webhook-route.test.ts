@@ -133,34 +133,7 @@ describe("POST /api/stripe/webhook", () => {
     expect(updateArg.metadata.email).toBe("a@b.com");
   });
 
-  it("sends the annual catalog value (29.99) on checkout.session.completed even though amount_total is 0 during the trial", async () => {
-    subscriptionsRetrieve.mockResolvedValue({
-      metadata: {},
-      items: { data: [{ price: { id: "price_annual" } }] },
-    });
-    constructEvent.mockReturnValue({
-      type: "checkout.session.completed",
-      id: "evt_10",
-      data: {
-        object: {
-          id: "cs_test_annual",
-          customer: "cus_2",
-          subscription: "sub_2",
-          customer_details: { email: "a@b.com" },
-          amount_total: 0,
-          currency: "usd",
-          metadata: { email: "a@b.com" },
-        },
-      },
-    });
-    const res = await POST(req());
-    expect(res.status).toBe(200);
-    const arg = sendCapiPurchase.mock.calls[0][0];
-    expect(arg.value).toBe(29.99);
-    expect(arg.currency).toBe("USD");
-  });
-
-  it("also sends CAPI StartTrial on checkout.session.completed for the annual plan, keyed by the same session id as Purchase", async () => {
+  it("sends CAPI StartTrial only (no Purchase) on annual checkout.session.completed: the card is not charged during the trial", async () => {
     subscriptionsRetrieve.mockResolvedValue({
       metadata: {},
       items: { data: [{ price: { id: "price_annual" } }] },
@@ -182,15 +155,84 @@ describe("POST /api/stripe/webhook", () => {
     });
     const res = await POST(req());
     expect(res.status).toBe(200);
+    expect(sendCapiPurchase).not.toHaveBeenCalled();
     expect(sendCapiStartTrial).toHaveBeenCalledTimes(1);
     const arg = sendCapiStartTrial.mock.calls[0][0];
     expect(arg.email).toBe("a@b.com");
     expect(arg.value).toBe(29.99);
     expect(arg.currency).toBe("USD");
     expect(arg.eventId).toBe("cs_test_trial");
-    // Same event id as the Purchase call, so browser and CAPI StartTrial dedup.
-    const purchaseArg = sendCapiPurchase.mock.calls[0][0];
-    expect(purchaseArg.eventId).toBe(arg.eventId);
+  });
+
+  it("sends CAPI Purchase with the charged amount on invoice.paid, keyed by the invoice id, with fbp/fbc from subscription metadata", async () => {
+    subscriptionsRetrieve.mockResolvedValue({
+      metadata: { email: "a@b.com", fbp: "fb.1.1.2", fbc: "fb.1.1.click" },
+      items: { data: [{ price: { id: "price_annual" } }] },
+    });
+    constructEvent.mockReturnValue({
+      type: "invoice.paid",
+      id: "evt_30",
+      data: {
+        object: {
+          id: "in_conv_1",
+          subscription: "sub_5",
+          amount_paid: 2999,
+          currency: "usd",
+          billing_reason: "subscription_cycle",
+          customer_email: "a@b.com",
+        },
+      },
+    });
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+    expect(sendCapiStartTrial).not.toHaveBeenCalled();
+    expect(sendCapiPurchase).toHaveBeenCalledTimes(1);
+    const arg = sendCapiPurchase.mock.calls[0][0] as Record<string, unknown>;
+    expect(arg.value).toBe(29.99);
+    expect(arg.currency).toBe("USD");
+    expect(arg.eventId).toBe("in_conv_1");
+    expect(arg.fbp).toBe("fb.1.1.2");
+    expect(arg.fbc).toBe("fb.1.1.click");
+  });
+
+  it("does not send CAPI on invoice.paid for the checkout-time invoice (subscription_create): that charge is already reported at checkout", async () => {
+    constructEvent.mockReturnValue({
+      type: "invoice.paid",
+      id: "evt_31",
+      data: {
+        object: {
+          id: "in_create_1",
+          subscription: "sub_6",
+          amount_paid: 499,
+          currency: "usd",
+          billing_reason: "subscription_create",
+          customer_email: "a@b.com",
+        },
+      },
+    });
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+    expect(sendCapiPurchase).not.toHaveBeenCalled();
+  });
+
+  it("does not send CAPI on a zero-amount invoice.paid (trial-start invoice)", async () => {
+    constructEvent.mockReturnValue({
+      type: "invoice.paid",
+      id: "evt_32",
+      data: {
+        object: {
+          id: "in_zero_1",
+          subscription: "sub_5",
+          amount_paid: 0,
+          currency: "usd",
+          billing_reason: "subscription_cycle",
+          customer_email: "a@b.com",
+        },
+      },
+    });
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+    expect(sendCapiPurchase).not.toHaveBeenCalled();
   });
 
   it("does not send CAPI StartTrial on checkout.session.completed for the weekly plan, since weekly has no trial", async () => {

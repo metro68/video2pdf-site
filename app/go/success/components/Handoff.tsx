@@ -18,12 +18,15 @@ export function Handoff({ token, value, eventId, isTrial = false }: HandoffProps
   useEffect(() => {
     if (fired.current) return;
     fired.current = true;
-    track("Purchase", { value, currency: "USD" }, eventId);
-    // Browser-side StartTrial fires here (not at checkout start) so it shares
-    // the session eventID with the webhook's CAPI StartTrial and Meta dedups
-    // the pair, and only completed checkouts count as trials.
+    // Purchase means "card actually charged": a trial checkout collects $0, so
+    // it fires StartTrial only; its Purchase comes server-side from Stripe's
+    // invoice.paid when the trial converts. A no-trial plan is charged here,
+    // so it fires Purchase. Each shares the session eventID with its CAPI
+    // twin from the webhook, so Meta dedups the pair.
     if (isTrial) {
       track("StartTrial", { value, currency: "USD", predicted_ltv: value }, eventId);
+    } else {
+      track("Purchase", { value, currency: "USD" }, eventId);
     }
   }, [value, eventId, isTrial]);
 

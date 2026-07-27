@@ -34,12 +34,17 @@ describe("Handoff", () => {
     expect(pixel.track).toHaveBeenCalledTimes(1);
   });
 
-  it("fires StartTrial with the same dedup eventId as CAPI when the plan is a trial", () => {
+  it("fires StartTrial only (no Purchase) for a trial plan: the card is not charged yet, and the Purchase comes from invoice.paid server-side", () => {
     render(<Handoff token="tok_abc" value={29.99} eventId="evt_9" isTrial />);
     expect(pixel.track).toHaveBeenCalledWith(
       "StartTrial",
       { value: 29.99, currency: "USD", predicted_ltv: 29.99 },
       "evt_9",
+    );
+    expect(pixel.track).not.toHaveBeenCalledWith(
+      "Purchase",
+      expect.anything(),
+      expect.anything(),
     );
   });
 

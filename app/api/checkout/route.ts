@@ -40,7 +40,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       ...(metaFbc ? { fbc: metaFbc } : {}),
     },
     subscription_data: {
-      metadata: { email },
+      metadata: {
+        email,
+        ...(metaFbp ? { fbp: metaFbp } : {}),
+        ...(metaFbc ? { fbc: metaFbc } : {}),
+      },
       ...(trialDays > 0 ? { trial_period_days: trialDays } : {}),
     },
     success_url: `${site}/go/success?session_id={CHECKOUT_SESSION_ID}`,
