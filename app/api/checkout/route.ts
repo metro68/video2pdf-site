@@ -5,13 +5,19 @@ import { FUNNEL_CONFIG } from "@/lib/funnel/config";
 type Plan = "weekly" | "annual";
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const { plan, email } = await request.json().catch(() => ({}));
+  const { plan, email, fbp, fbc } = await request.json().catch(() => ({}));
   if (plan !== "weekly" && plan !== "annual") {
     return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
   }
   if (!email || typeof email !== "string") {
     return NextResponse.json({ error: "Missing email" }, { status: 400 });
   }
+  // Meta browser cookies, forwarded by the funnel so the webhook's CAPI events
+  // can carry click/browser identifiers. Stripe metadata values cap at 500 chars.
+  const cleanCookie = (v: unknown): string | undefined =>
+    typeof v === "string" && v.length > 0 && v.length <= 500 ? v : undefined;
+  const metaFbp = cleanCookie(fbp);
+  const metaFbc = cleanCookie(fbc);
   const priceEnv: Record<Plan, string | undefined> = {
     weekly: process.env.STRIPE_PRICE_WEEKLY,
     annual: process.env.STRIPE_PRICE_ANNUAL,
@@ -28,6 +34,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     mode: "subscription",
     customer_email: email,
     line_items: [{ price, quantity: 1 }],
+    metadata: {
+      email,
+      ...(metaFbp ? { fbp: metaFbp } : {}),
+      ...(metaFbc ? { fbc: metaFbc } : {}),
+    },
     subscription_data: {
       metadata: { email },
       ...(trialDays > 0 ? { trial_period_days: trialDays } : {}),

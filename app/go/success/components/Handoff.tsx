@@ -9,16 +9,23 @@ export interface HandoffProps {
   token: string;
   value: number;
   eventId: string;
+  isTrial?: boolean;
 }
 
-export function Handoff({ token, value, eventId }: HandoffProps) {
+export function Handoff({ token, value, eventId, isTrial = false }: HandoffProps) {
   const fired = useRef(false);
 
   useEffect(() => {
     if (fired.current) return;
     fired.current = true;
     track("Purchase", { value, currency: "USD" }, eventId);
-  }, [value, eventId]);
+    // Browser-side StartTrial fires here (not at checkout start) so it shares
+    // the session eventID with the webhook's CAPI StartTrial and Meta dedups
+    // the pair, and only completed checkouts count as trials.
+    if (isTrial) {
+      track("StartTrial", { value, currency: "USD", predicted_ltv: value }, eventId);
+    }
+  }, [value, eventId, isTrial]);
 
   // Our own universal link (AASA served by this site on a separate host so iOS
   // does not suppress it as same-domain): installed app opens directly with the

@@ -9,6 +9,11 @@ interface SendCapiEventInput {
   value: number;
   currency: string;
   eventId: string;
+  // Meta browser identifiers (_fbp/_fbc cookies) captured at checkout; they
+  // raise event match quality well above email-only matching. Unhashed by
+  // Meta's spec.
+  fbp?: string;
+  fbc?: string;
 }
 
 async function sendCapiEvent(eventName: string, input: SendCapiEventInput): Promise<void> {
@@ -24,7 +29,11 @@ async function sendCapiEvent(eventName: string, input: SendCapiEventInput): Prom
         event_time: Math.floor(Date.now() / 1000),
         action_source: "website",
         event_id: input.eventId,
-        user_data: { em: hashEmail(input.email) },
+        user_data: {
+          em: hashEmail(input.email),
+          ...(input.fbp ? { fbp: input.fbp } : {}),
+          ...(input.fbc ? { fbc: input.fbc } : {}),
+        },
         custom_data: { value: input.value, currency: input.currency },
       },
     ],

@@ -14,6 +14,7 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
   let token = "";
   let value = 0;
   let eventId = "";
+  let isTrial = false;
 
   if (sessionId) {
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
@@ -36,6 +37,7 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
       | undefined;
     const plan = subPriceId ? PRICE_TO_PLAN[subPriceId] : undefined;
     value = plan ? FUNNEL_CONFIG.plans[plan].cents / 100 : (session.amount_total ?? 0) / 100;
+    isTrial = plan ? FUNNEL_CONFIG.plans[plan].trialDays > 0 : false;
 
     const metadataToken =
       (session.metadata?.redeem_token as string | undefined) ??
@@ -81,5 +83,5 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
     }
   }
 
-  return <Handoff token={token} value={value} eventId={eventId} />;
+  return <Handoff token={token} value={value} eventId={eventId} isTrial={isTrial} />;
 }

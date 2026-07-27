@@ -90,13 +90,18 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         const currency = String(o.currency ?? "usd").toUpperCase();
 
-        await sendCapiPurchase({ email, value, currency, eventId: sessionId });
+        // _fbp/_fbc were stashed in session metadata by /api/checkout so these
+        // server-side events can match the originating click and browser.
+        const fbp = typeof o?.metadata?.fbp === "string" ? o.metadata.fbp : undefined;
+        const fbc = typeof o?.metadata?.fbc === "string" ? o.metadata.fbc : undefined;
+
+        await sendCapiPurchase({ email, value, currency, eventId: sessionId, fbp, fbc });
 
         // StartTrial mirrors the app's Facebook StartTrial signal for the trial plan
-        // only (annual). Reuses the Purchase session-id eventId so browser-side
-        // StartTrial (fired at checkout start) and this CAPI event dedup in Meta.
+        // only (annual). Reuses the Purchase session-id eventId so the browser
+        // StartTrial (fired on the success page) and this CAPI event dedup in Meta.
         if (plan === "annual") {
-          await sendCapiStartTrial({ email, value, currency, eventId: sessionId });
+          await sendCapiStartTrial({ email, value, currency, eventId: sessionId, fbp, fbc });
         }
       }
     }

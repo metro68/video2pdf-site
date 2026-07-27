@@ -42,6 +42,27 @@ describe("sendCapiPurchase", () => {
     await sendCapiPurchase({ email: "a@b.com", value: 1, currency: "USD", eventId: "x" });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("passes fbp/fbc into user_data unhashed when provided, and omits them when absent", async () => {
+    vi.stubEnv("META_CAPI_ACCESS_TOKEN", "TOK1");
+    await sendCapiPurchase({
+      email: "a@b.com",
+      value: 4.99,
+      currency: "USD",
+      eventId: "evt_3",
+      fbp: "fb.1.111.222",
+      fbc: "fb.1.111.IwAR333",
+    });
+    let body = JSON.parse((fetchMock.mock.calls[0][1] as any).body);
+    expect(body.data[0].user_data.fbp).toBe("fb.1.111.222");
+    expect(body.data[0].user_data.fbc).toBe("fb.1.111.IwAR333");
+
+    fetchMock.mockClear();
+    await sendCapiPurchase({ email: "a@b.com", value: 4.99, currency: "USD", eventId: "evt_4" });
+    body = JSON.parse((fetchMock.mock.calls[0][1] as any).body);
+    expect(body.data[0].user_data).not.toHaveProperty("fbp");
+    expect(body.data[0].user_data).not.toHaveProperty("fbc");
+  });
 });
 
 describe("sendCapiStartTrial", () => {

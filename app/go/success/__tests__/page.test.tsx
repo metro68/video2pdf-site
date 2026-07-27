@@ -67,6 +67,7 @@ describe("SuccessPage", () => {
     expect(element.props.value).toBe(29.99);
     expect(element.props.token).toBe("tok_abc");
     expect(element.props.eventId).toBe("cs_test_123");
+    expect(element.props.isTrial).toBe(true);
   });
 
   it("uses the weekly catalog value (4.99) when the session is for the weekly plan", async () => {
@@ -81,6 +82,7 @@ describe("SuccessPage", () => {
     });
     const element = await SuccessPage({ searchParams: Promise.resolve({ session_id: "cs_test_456" }) });
     expect(element.props.value).toBe(4.99);
+    expect(element.props.isTrial).toBe(false);
   });
 
   it("returns a zero value and empty token when there is no session id", async () => {

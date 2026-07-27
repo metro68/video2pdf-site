@@ -206,7 +206,7 @@ describe("Funnel", () => {
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.test/s/1"));
   });
 
-  it("fires StartTrial in addition to InitiateCheckout on annual plan select, since annual is the trial plan", async () => {
+  it("does not fire StartTrial at checkout start on the annual plan: it fires on the success page with the session eventID so it dedups against CAPI and abandons do not count", async () => {
     const assign = vi.fn();
     Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });
     render(<Funnel />);
@@ -214,12 +214,30 @@ describe("Funnel", () => {
     answerQualifyTaps();
     capturEmailAndContinue();
     fireEvent.click(await screen.findByRole("button", { name: /3-day free trial.*29\.99/i }));
-    expect(pixel.track).toHaveBeenCalledWith("StartTrial", {
-      value: 29.99,
-      currency: "USD",
-      predicted_ltv: 29.99,
-    });
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(pixel.track).not.toHaveBeenCalledWith("StartTrial", expect.anything());
+  });
+
+  it("forwards the _fbp and _fbc Meta cookies with the checkout request", async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });
+    document.cookie = "_fbp=fb.1.111.222";
+    document.cookie = "_fbc=fb.1.111.IwAR333";
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    fireEvent.click(await screen.findByRole("button", { name: /weekly.*4\.99/i }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    // fetchMock is typed arg-less for convenience; the component calls it with
+    // (url, init), so the recorded call args are re-widened here to read the body.
+    const calls = (fetchMock as unknown as { mock: { calls: [string, RequestInit][] } }).mock
+      .calls;
+    const body = JSON.parse(String(calls[0][1].body));
+    expect(body.fbp).toBe("fb.1.111.222");
+    expect(body.fbc).toBe("fb.1.111.IwAR333");
+    document.cookie = "_fbp=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "_fbc=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
   });
 
   it("does not fire StartTrial on weekly plan select, since weekly has no trial", async () => {

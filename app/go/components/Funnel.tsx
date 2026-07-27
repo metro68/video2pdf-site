@@ -15,6 +15,11 @@ type ScanType = (typeof SCAN_TYPES)[number];
 const FREQUENCIES = ["Daily", "Weekly", "Sometimes"] as const;
 type Frequency = (typeof FREQUENCIES)[number];
 
+function readCookie(name: string): string | undefined {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
 function StepProgress({ step }: { step: Step }) {
   const index = STEPS.indexOf(step);
   return (
@@ -81,9 +86,9 @@ export function Funnel() {
     const cents = FUNNEL_CONFIG.plans[plan].cents;
     const value = cents / 100;
     track("InitiateCheckout", { value, currency: "USD" });
-    if (plan === "annual") {
-      track("StartTrial", { value, currency: "USD", predicted_ltv: value });
-    }
+    // StartTrial deliberately does NOT fire here: it fires on the success page
+    // with the checkout-session eventID so it dedups against the webhook's
+    // CAPI StartTrial, and so abandoned checkouts are not counted as trials.
     trackCustom("funnel_plan_selected", { plan, value });
     setCheckoutError(null);
     setBusy(true);
@@ -91,7 +96,14 @@ export function Funnel() {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ plan, email }),
+        // _fbp/_fbc ride along into Stripe session metadata so the webhook's
+        // server-side CAPI events can match the click, not just the email.
+        body: JSON.stringify({
+          plan,
+          email,
+          fbp: readCookie("_fbp"),
+          fbc: readCookie("_fbc"),
+        }),
       });
       if (res.ok === false) {
         trackCustom("funnel_checkout_error", { plan });
