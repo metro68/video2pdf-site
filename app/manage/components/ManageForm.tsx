@@ -53,11 +53,24 @@ export function ManageForm() {
     }
   }
 
+  function handleExpiredSession() {
+    try {
+      sessionStorage.removeItem("v2p_manage");
+    } catch {
+      // ignore storage access failures, still redirect
+    }
+    window.location.replace("/manage");
+  }
+
   async function openPortal() {
     if (!token) return;
     setBusy(true);
     try {
       const res = await post("/api/manage/portal", { token });
+      if (res.status === 401) {
+        handleExpiredSession();
+        return;
+      }
       const data = await res.json().catch(() => ({}));
       if (data?.url) window.location.assign(data.url);
       else setError("Something went wrong. Please try again.");
@@ -73,8 +86,13 @@ export function ManageForm() {
     setBusy(true);
     try {
       const res = await post("/api/manage/resume", { token });
-      if (res.ok) setResumed(true);
-      else setError("Something went wrong. Please try again.");
+      if (res.ok) {
+        setResumed(true);
+      } else if (res.status === 401) {
+        handleExpiredSession();
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

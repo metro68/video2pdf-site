@@ -97,6 +97,17 @@ describe("POST /api/manage/offer", () => {
     expect((await offerPOST(req("offer", { token }))).status).toBe(409);
     expect(applyAnnualWinback).not.toHaveBeenCalled();
   });
+
+  it("un-schedules a pending cancellation before applying the offer", async () => {
+    subsRetrieve.mockResolvedValue({
+      ...annualSub,
+      cancel_at_period_end: true,
+    });
+    const res = await offerPOST(req("offer", { token }));
+    expect(res.status).toBe(200);
+    expect(setCancelAtPeriodEnd).toHaveBeenCalledWith("sub_1", false);
+    expect(applyAnnualWinback).toHaveBeenCalledWith("sub_1");
+  });
 });
 
 describe("POST /api/manage/cancel", () => {

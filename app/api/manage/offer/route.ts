@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { loadManagedSubscription } from "@/lib/manage/auth";
-import { applyAnnualWinback, applyWeeklyPause } from "@/lib/manage/stripeOps";
+import {
+  applyAnnualWinback,
+  applyWeeklyPause,
+  setCancelAtPeriodEnd,
+} from "@/lib/manage/stripeOps";
 import { insertCancellationEvent } from "@/lib/db/cancellationEvents";
 import { MANAGE_CONFIG } from "@/lib/manage/config";
 
@@ -16,6 +20,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   try {
+    // A subscription already scheduled to cancel must be un-scheduled before the
+    // offer is applied, otherwise the coupon or pause is burned while the
+    // subscription still terminates at period end.
+    if (sub.cancel_at_period_end) {
+      await setCancelAtPeriodEnd(sub.id, false);
+    }
     let outcome: "saved_offer" | "paused";
     if (overview.plan === "annual") {
       await applyAnnualWinback(sub.id);

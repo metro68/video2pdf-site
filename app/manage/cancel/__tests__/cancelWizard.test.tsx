@@ -32,6 +32,31 @@ function mockFetch(responses: Record<string, unknown> = {}) {
   return calls;
 }
 
+interface RouteResponse {
+  ok?: boolean;
+  status?: number;
+  url?: string;
+}
+
+function mockFetchPerRoute(routes: Record<string, RouteResponse>) {
+  const calls: Array<{ url: string; body: unknown }> = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      calls.push({ url, body });
+      const route = routes[url] ?? { ok: true, status: 200 };
+      const status = route.status ?? (route.ok === false ? 500 : 200);
+      return {
+        ok: route.ok ?? status < 400,
+        status,
+        json: async () => route,
+      };
+    }),
+  );
+  return calls;
+}
+
 beforeEach(() => {
   sessionStorage.clear();
   vi.unstubAllGlobals();
@@ -121,5 +146,61 @@ describe("CancelWizard", () => {
     vi.stubGlobal("location", { ...window.location, replace });
     render(<CancelWizard />);
     expect(replace).toHaveBeenCalledWith("/manage");
+  });
+
+  it("clears the stashed session and redirects to /manage on a 401", async () => {
+    seed(annual);
+    const replace = vi.fn();
+    vi.stubGlobal("location", { ...window.location, replace });
+    mockFetchPerRoute({ "/api/manage/cancel": { ok: false, status: 401 } });
+    render(<CancelWizard />);
+    advancePastSurvey();
+    fireEvent.click(await screen.findByText(/continue to cancel/i));
+    fireEvent.click(await screen.findByText(/no thanks, cancel my plan/i));
+    fireEvent.click(await screen.findByRole("button", { name: /cancel my subscription/i }));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/manage"));
+    expect(sessionStorage.getItem("v2p_manage")).toBeNull();
+  });
+
+  it("shows a not-available notice and falls back to confirm on a 409 offer response", async () => {
+    seed(annual);
+    mockFetchPerRoute({ "/api/manage/offer": { ok: false, status: 409 } });
+    render(<CancelWizard />);
+    advancePastSurvey();
+    fireEvent.click(await screen.findByText(/continue to cancel/i));
+    fireEvent.click(await screen.findByRole("button", { name: /claim my \$0\.99 year/i }));
+    expect(await screen.findByText(/your plan will end on/i)).toBeTruthy();
+    expect(screen.getByText(/that offer is no longer available/i)).toBeTruthy();
+  });
+
+  it("offers the billing-provider fallback after two failed cancel attempts", async () => {
+    seed(annual);
+    const calls = mockFetchPerRoute({
+      "/api/manage/cancel": { ok: false, status: 500 },
+      "/api/manage/portal": { ok: true, status: 200, url: "https://billing.stripe.com/session" },
+    });
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    render(<CancelWizard />);
+    advancePastSurvey();
+    fireEvent.click(await screen.findByText(/continue to cancel/i));
+    fireEvent.click(await screen.findByText(/no thanks, cancel my plan/i));
+
+    const cancelButton = await screen.findByRole("button", { name: /cancel my subscription/i });
+    fireEvent.click(cancelButton);
+    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+    fireEvent.click(cancelButton);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /cancel through our billing provider/i }),
+      ).toBeTruthy(),
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /cancel through our billing provider/i }),
+    );
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("https://billing.stripe.com/session"));
+    const portalCall = calls.find((c) => c.url === "/api/manage/portal");
+    expect(portalCall?.body).toMatchObject({ token: "tok", fallbackCancel: true });
   });
 });

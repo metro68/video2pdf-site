@@ -38,6 +38,18 @@ export function CancelWizard() {
     }
   }, []);
 
+  useEffect(() => {
+    // The flow has ended (canceled, saved, or kept); the stashed overview is
+    // stale from here on, so drop it rather than let it linger for later visits.
+    if (view === "done" || view === "saved" || view === "kept") {
+      try {
+        sessionStorage.removeItem("v2p_manage");
+      } catch {
+        // ignore storage access failures
+      }
+    }
+  }, [view]);
+
   if (!flow) return null;
   const { token, overview } = flow;
   const endDate = fmtDate(overview.currentPeriodEnd);
@@ -67,13 +79,30 @@ export function CancelWizard() {
     setView(overview.offerAvailable ? "offer" : "confirm");
   }
 
+  function handleExpiredSession() {
+    try {
+      sessionStorage.removeItem("v2p_manage");
+    } catch {
+      // ignore storage access failures, still redirect
+    }
+    window.location.replace("/manage");
+  }
+
   async function acceptOffer() {
     setError(null);
     setBusy(true);
     try {
       const res = await post("/api/manage/offer", { token });
-      if (res.ok) setView("saved");
-      else setError("Something went wrong. Please try again.");
+      if (res.ok) {
+        setView("saved");
+      } else if (res.status === 401) {
+        handleExpiredSession();
+      } else if (res.status === 409) {
+        setError("That offer is no longer available.");
+        setView("confirm");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -88,6 +117,8 @@ export function CancelWizard() {
       const res = await post("/api/manage/cancel", { token, reason, comment });
       if (res.ok) {
         setView("done");
+      } else if (res.status === 401) {
+        handleExpiredSession();
       } else {
         setCancelFails((n) => n + 1);
         setError("Something went wrong. Please try again.");
@@ -104,6 +135,10 @@ export function CancelWizard() {
     setBusy(true);
     try {
       const res = await post("/api/manage/portal", { token, fallbackCancel: true });
+      if (res.status === 401) {
+        handleExpiredSession();
+        return;
+      }
       const data = await res.json().catch(() => ({}));
       if (data?.url) window.location.assign(data.url);
       else setError("Something went wrong. Please try again.");
