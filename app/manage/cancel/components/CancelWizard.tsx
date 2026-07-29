@@ -57,12 +57,9 @@ export function CancelWizard() {
 
   function advanceFromSurvey(chosen: CancelReasonId) {
     setReason(chosen);
-    post("/api/manage/feedback", {
-      token,
-      reason: chosen,
-      comment,
-      stepReached: "survey",
-    }).catch(() => {});
+    // reason state hasn't updated yet at click time, so pass the chosen
+    // reason explicitly rather than letting sendFeedback close over state.
+    sendFeedback({ reason: chosen, stepReached: "survey" });
     setView("loss");
   }
 
@@ -244,7 +241,6 @@ export function CancelWizard() {
           type="button"
           disabled={busy}
           onClick={acceptOffer}
-          aria-label={annual ? "Stay for $0.99" : "Pause my plan for 30 days"}
           className="mt-8 w-full rounded-lg bg-brand-primary px-8 py-4 text-base font-semibold text-white disabled:opacity-40"
         >
           {annual ? "Claim my $0.99 year" : "Pause my plan for 30 days"}

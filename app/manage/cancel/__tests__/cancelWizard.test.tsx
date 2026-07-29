@@ -80,7 +80,7 @@ describe("CancelWizard", () => {
     render(<CancelWizard />);
     advancePastSurvey();
     fireEvent.click(await screen.findByText(/continue to cancel/i));
-    fireEvent.click(await screen.findByRole("button", { name: /stay for \$0\.99/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /claim my \$0\.99 year/i }));
     await waitFor(() =>
       expect(screen.getByText(/your next year is \$0\.99/i)).toBeTruthy(),
     );
