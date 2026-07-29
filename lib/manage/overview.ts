@@ -7,7 +7,7 @@ import { MANAGE_CONFIG } from "./config";
 // (see lib/stripe/webhook.ts for the same handling).
 export interface StripeSubLike {
   id: string;
-  customer: string;
+  customer?: string;
   status: string;
   cancel_at_period_end: boolean;
   created: number;

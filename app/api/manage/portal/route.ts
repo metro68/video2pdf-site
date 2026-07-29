@@ -12,8 +12,14 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const site = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.video2pdf.ai";
   try {
-    const configuration = await ensurePortalConfiguration(fallbackCancel === true);
     const customer = managed.sub.customer;
+    if (!customer) {
+      return NextResponse.json(
+        { error: "Something went wrong. Please try again." },
+        { status: 500 },
+      );
+    }
+    const configuration = await ensurePortalConfiguration(fallbackCancel === true);
     const portal = await stripe.billingPortal.sessions.create({
       customer,
       configuration,
