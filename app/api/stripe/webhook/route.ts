@@ -5,6 +5,7 @@ import { upsertSubscription, mintRedeemToken } from "@/lib/db/subscriptions";
 import { generateRedeemCode } from "@/lib/db/redeemCode";
 import { sendCapiPurchase, sendCapiStartTrial } from "@/lib/pixel/capi";
 import { applyDeferredWinback } from "@/lib/manage/stripeOps";
+import { cancelSubscriptionOnPaymentFailure } from "@/lib/stripe/paymentFailure";
 import { FUNNEL_CONFIG } from "@/lib/funnel/config";
 
 const DEFAULT_REDEEM_TTL_MS = 7 * 86400_000;
@@ -163,6 +164,25 @@ export async function POST(request: Request): Promise<NextResponse> {
               : undefined,
         });
       }
+    }
+  }
+
+  if (event.type === "invoice.payment_failed") {
+    // A subscription charge failed (renewal or trial conversion). Policy is to
+    // cancel on the first failure rather than let Stripe dun the card while the
+    // user keeps access: the advanced current_period_end would otherwise keep
+    // the entitlement valid for the whole unpaid period.
+    // billing_reason subscription_create is the checkout-time invoice; Checkout
+    // owns that payment flow, so it is not our signal to cancel anything.
+    // Dynamic Stripe Invoice payload; only the fields we need are read here.
+    const o: any = event.data.object;
+    const subscriptionId =
+      o?.subscription ?? o?.parent?.subscription_details?.subscription ?? null;
+    if (subscriptionId && o?.billing_reason !== "subscription_create") {
+      await cancelSubscriptionOnPaymentFailure(
+        String(subscriptionId),
+        o?.id ? String(o.id) : null,
+      );
     }
   }
 
