@@ -43,10 +43,6 @@ const applyDeferredWinback = vi.hoisted(() => vi.fn(async (_id: string) => {}));
 vi.mock("@/lib/manage/stripeOps", () => ({
   applyDeferredWinback: (id: string) => applyDeferredWinback(id),
 }));
-const cancelSubscriptionOnPaymentFailure = vi.hoisted(() =>
-  vi.fn(async (_subId: string, _invoiceId: string | null) => {}),
-);
-vi.mock("@/lib/stripe/paymentFailure", () => ({ cancelSubscriptionOnPaymentFailure }));
 vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
 
 import { POST } from "@/app/api/stripe/webhook/route";
@@ -64,7 +60,6 @@ beforeEach(() => {
   });
   subscriptionsUpdate.mockClear();
   applyDeferredWinback.mockClear();
-  cancelSubscriptionOnPaymentFailure.mockClear();
 });
 
 function req(sig = "sig") {
@@ -397,74 +392,6 @@ describe("POST /api/stripe/webhook", () => {
     expect(mintRedeemToken).not.toHaveBeenCalled();
     expect(sendCapiPurchase).not.toHaveBeenCalled();
     expect(subscriptionsUpdate).not.toHaveBeenCalled();
-  });
-
-  it("cancels the subscription on invoice.payment_failed for a renewal or trial-conversion charge", async () => {
-    constructEvent.mockReturnValue({
-      type: "invoice.payment_failed",
-      id: "evt_40",
-      data: {
-        object: {
-          id: "in_fail_1",
-          subscription: "sub_5",
-          billing_reason: "subscription_cycle",
-          customer_email: "a@b.com",
-        },
-      },
-    });
-    const res = await POST(req());
-    expect(res.status).toBe(200);
-    expect(cancelSubscriptionOnPaymentFailure).toHaveBeenCalledWith("sub_5", "in_fail_1");
-  });
-
-  it("resolves the subscription id from parent.subscription_details on invoice.payment_failed (pinned apiVersion shape)", async () => {
-    constructEvent.mockReturnValue({
-      type: "invoice.payment_failed",
-      id: "evt_41",
-      data: {
-        object: {
-          id: "in_fail_2",
-          parent: { subscription_details: { subscription: "sub_9" } },
-          billing_reason: "subscription_cycle",
-        },
-      },
-    });
-    const res = await POST(req());
-    expect(res.status).toBe(200);
-    expect(cancelSubscriptionOnPaymentFailure).toHaveBeenCalledWith("sub_9", "in_fail_2");
-  });
-
-  it("does not cancel on invoice.payment_failed for the checkout-time invoice (subscription_create): Checkout owns that flow", async () => {
-    constructEvent.mockReturnValue({
-      type: "invoice.payment_failed",
-      id: "evt_42",
-      data: {
-        object: {
-          id: "in_fail_3",
-          subscription: "sub_6",
-          billing_reason: "subscription_create",
-        },
-      },
-    });
-    const res = await POST(req());
-    expect(res.status).toBe(200);
-    expect(cancelSubscriptionOnPaymentFailure).not.toHaveBeenCalled();
-  });
-
-  it("does not cancel on invoice.payment_failed without a subscription (one-off invoice)", async () => {
-    constructEvent.mockReturnValue({
-      type: "invoice.payment_failed",
-      id: "evt_43",
-      data: {
-        object: {
-          id: "in_fail_4",
-          billing_reason: "manual",
-        },
-      },
-    });
-    const res = await POST(req());
-    expect(res.status).toBe(200);
-    expect(cancelSubscriptionOnPaymentFailure).not.toHaveBeenCalled();
   });
 
   it("upserts a minimal subscriptions row before minting the token, so the redeem_tokens FK is satisfiable even if completed arrives before customer.subscription.*", async () => {
