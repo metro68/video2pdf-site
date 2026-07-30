@@ -3,6 +3,7 @@ import { loadManagedSubscription } from "@/lib/manage/auth";
 import {
   applyAnnualWinback,
   applyWeeklyPause,
+  deferAnnualWinback,
   setCancelAtPeriodEnd,
 } from "@/lib/manage/stripeOps";
 import { insertCancellationEvent } from "@/lib/db/cancellationEvents";
@@ -28,7 +29,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
     let outcome: "saved_offer" | "paused";
     if (overview.plan === "annual") {
-      await applyAnnualWinback(sub.id);
+      if (overview.trialing) {
+        // During the trial the next invoice is the $29.99 conversion charge,
+        // which must bill at full price. Defer the coupon; the invoice.paid
+        // webhook applies it after that charge, discounting year 2 instead.
+        await deferAnnualWinback(sub.id);
+      } else {
+        await applyAnnualWinback(sub.id);
+      }
       outcome = "saved_offer";
     } else {
       const resumesAt =

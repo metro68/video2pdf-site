@@ -33,6 +33,28 @@ export async function applyAnnualWinback(subscriptionId: string): Promise<void> 
   });
 }
 
+// Trialing subscribers must never have the coupon touch their first (trial
+// conversion) invoice: the offer's promise is full price for year 1, $0.99 for
+// year 2. Accepting during trial only records the redemption plus a deferred
+// marker; the webhook applies the coupon after the first real charge lands.
+export async function deferAnnualWinback(subscriptionId: string): Promise<void> {
+  await stripe.subscriptions.update(subscriptionId, {
+    metadata: { winback_redeemed: "1", winback_deferred: "1" },
+  });
+}
+
+// Called by the invoice.paid webhook once a real charge has been collected on a
+// subscription carrying the deferred marker. Attaches the coupon (discounting
+// the NEXT renewal) and unsets the marker (empty string deletes a metadata key
+// in Stripe), so webhook retries are idempotent.
+export async function applyDeferredWinback(subscriptionId: string): Promise<void> {
+  const coupon = await ensureWinbackCoupon();
+  await stripe.subscriptions.update(subscriptionId, {
+    discounts: [{ coupon }],
+    metadata: { winback_deferred: "" },
+  });
+}
+
 export async function applyWeeklyPause(
   subscriptionId: string,
   resumesAtSec: number,

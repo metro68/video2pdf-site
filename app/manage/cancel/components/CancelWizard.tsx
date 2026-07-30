@@ -258,18 +258,26 @@ export function CancelWizard() {
 
   if (view === "offer") {
     const annual = overview.plan === "annual";
+    const trialing = overview.trialing;
     const pauseEnd = fmtDate(Date.now() + MANAGE_CONFIG.pauseDays * 24 * 60 * 60 * 1000);
+    const annualHeadline = trialing ? "Your second year for $0.99" : "Stay for $0.99";
+    const annualSub = trialing
+      ? "Stay subscribed and your second year is 97% off."
+      : "Your entire next year, 97% off.";
+    const annualFinePrint = trialing
+      ? `Your plan renews at $29.99 on ${endDate} as scheduled. Your renewal after that will be $0.99, then $29.99/yr unless canceled.`
+      : `Your next annual renewal on ${endDate} will be $0.99. After that, $29.99/yr unless canceled.`;
     return shell(
       <>
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-primary">
           Wait, one last thing
         </p>
         <h1 className="mt-2 text-3xl font-bold">
-          {annual ? "Stay for $0.99" : "Take 30 days on us"}
+          {annual ? annualHeadline : "Take 30 days on us"}
         </h1>
         <p className="mt-2 text-brand-text-secondary">
           {annual
-            ? "Your entire next year, 97% off."
+            ? annualSub
             : "No charges for 30 days. Pick up right where you left off."}
         </p>
         <button
@@ -282,7 +290,7 @@ export function CancelWizard() {
         </button>
         <p className="mt-3 text-xs text-brand-text-secondary">
           {annual
-            ? `Your next annual renewal on ${endDate} will be $0.99. After that, $29.99/yr unless canceled.`
+            ? annualFinePrint
             : `No charges until ${pauseEnd}. Your plan resumes automatically at $4.99/wk.`}
         </p>
         {quietLink("No thanks, cancel my plan", () => setView("confirm"))}
@@ -324,7 +332,9 @@ export function CancelWizard() {
       <>
         <h1 className="text-2xl font-bold">
           {overview.plan === "annual"
-            ? "You're all set: your next year is $0.99"
+            ? overview.trialing
+              ? "You're all set: your second year will be $0.99"
+              : "You're all set: your next year is $0.99"
             : "Paused. Enjoy your 30 days on us."}
         </h1>
         <a href="/manage" className="mt-6 text-sm text-brand-text-secondary underline">

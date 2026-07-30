@@ -24,7 +24,9 @@ vi.mock("@/lib/stripe/client", () => ({
 import {
   ensureWinbackCoupon,
   applyAnnualWinback,
+  applyDeferredWinback,
   applyWeeklyPause,
+  deferAnnualWinback,
   setCancelAtPeriodEnd,
   ensurePortalConfiguration,
 } from "@/lib/manage/stripeOps";
@@ -65,6 +67,24 @@ describe("offer and cancel operations", () => {
     expect(subsUpdate).toHaveBeenCalledWith("sub_1", {
       discounts: [{ coupon: "winback-annual-29" }],
       metadata: { winback_redeemed: "1" },
+    });
+  });
+
+  it("defers the trialing winback: redemption plus deferred marker, no discount", async () => {
+    await deferAnnualWinback("sub_1");
+    expect(subsUpdate).toHaveBeenCalledWith("sub_1", {
+      metadata: { winback_redeemed: "1", winback_deferred: "1" },
+    });
+    expect(couponsRetrieve).not.toHaveBeenCalled();
+    expect(couponsCreate).not.toHaveBeenCalled();
+  });
+
+  it("applies a deferred winback: attaches the coupon and clears the marker", async () => {
+    couponsRetrieve.mockResolvedValue({ id: "winback-annual-29" });
+    await applyDeferredWinback("sub_1");
+    expect(subsUpdate).toHaveBeenCalledWith("sub_1", {
+      discounts: [{ coupon: "winback-annual-29" }],
+      metadata: { winback_deferred: "" },
     });
   });
 

@@ -88,7 +88,7 @@ Skipped entirely when the plan's offer was already redeemed (metadata flag) or w
 
 - Mechanics: apply a one-time $29-off coupon (duration `once`) to the subscription. The next renewal invoice totals $0.99; the following year reverts to $29.99.
 - Fine print on the screen states exactly that: "Your next annual renewal on DATE will be $0.99. After that, $29.99/yr unless canceled."
-- Trialing annual subscribers get the same offer, which makes their first paid year $0.99. Rationale: a canceling trial is $0 otherwise, and $0.99 buys a shot at a full-price year-2 renewal. This is behind a config flag (`offerToTrialing`, default true) so it can be shut off if redemption data shows gaming.
+- Trialing annual subscribers get a DEFERRED version of the offer: the first paid year always bills at the full $29.99, and the $0.99 applies to the year after. Accepting during trial records the redemption plus a `winback_deferred` marker on the subscription (no discount yet); the `invoice.paid` webhook attaches the coupon after the first real charge lands, so the next renewal (year 2) invoices at $0.99. Offer copy for trialing users states this explicitly ("Your plan renews at $29.99 on DATE as scheduled. Your renewal after that will be $0.99"). The `offerToTrialing` flag (default true) remains the kill switch for showing trial users any offer at all. The coupon must never discount the trial-conversion invoice.
 
 **Weekly ($4.99/wk):** "Take 30 days on us."
 

@@ -4,6 +4,7 @@ import { mapEventToMutation } from "@/lib/stripe/webhook";
 import { upsertSubscription, mintRedeemToken } from "@/lib/db/subscriptions";
 import { generateRedeemCode } from "@/lib/db/redeemCode";
 import { sendCapiPurchase, sendCapiStartTrial } from "@/lib/pixel/capi";
+import { applyDeferredWinback } from "@/lib/manage/stripeOps";
 import { FUNNEL_CONFIG } from "@/lib/funnel/config";
 
 const DEFAULT_REDEEM_TTL_MS = 7 * 86400_000;
@@ -133,6 +134,16 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (subscriptionId && amountPaid > 0 && o?.billing_reason !== "subscription_create") {
       // Dynamic Stripe Subscription payload; only metadata is read here.
       const subscription: any = await stripe.subscriptions.retrieve(String(subscriptionId));
+
+      // A cancel-flow save accepted during the trial deferred its coupon so the
+      // conversion invoice billed at full price. That charge just landed, so
+      // attach the coupon now: the NEXT renewal (year 2) bills at $0.99. Errors
+      // propagate so Stripe retries the delivery; applyDeferredWinback clears
+      // the marker on success, making retries no-ops.
+      if (subscription?.metadata?.winback_deferred === "1") {
+        await applyDeferredWinback(String(subscriptionId));
+      }
+
       const rawEmail = o?.customer_email ?? subscription?.metadata?.email;
       const email =
         typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";

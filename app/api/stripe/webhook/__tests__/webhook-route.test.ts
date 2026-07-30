@@ -39,6 +39,10 @@ vi.mock("@/lib/stripe/client", () => ({
 }));
 vi.mock("@/lib/db/subscriptions", () => ({ upsertSubscription, mintRedeemToken }));
 vi.mock("@/lib/pixel/capi", () => ({ sendCapiPurchase, sendCapiStartTrial }));
+const applyDeferredWinback = vi.hoisted(() => vi.fn(async (_id: string) => {}));
+vi.mock("@/lib/manage/stripeOps", () => ({
+  applyDeferredWinback: (id: string) => applyDeferredWinback(id),
+}));
 vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
 
 import { POST } from "@/app/api/stripe/webhook/route";
@@ -55,6 +59,7 @@ beforeEach(() => {
     items: { data: [{ price: { id: "price_weekly" } }] },
   });
   subscriptionsUpdate.mockClear();
+  applyDeferredWinback.mockClear();
 });
 
 function req(sig = "sig") {
@@ -193,6 +198,56 @@ describe("POST /api/stripe/webhook", () => {
     expect(arg.eventId).toBe("in_conv_1");
     expect(arg.fbp).toBe("fb.1.1.2");
     expect(arg.fbc).toBe("fb.1.1.click");
+  });
+
+  it("applies the deferred winback coupon on invoice.paid when the subscription carries the marker", async () => {
+    subscriptionsRetrieve.mockResolvedValue({
+      metadata: { email: "a@b.com", winback_deferred: "1" },
+      items: { data: [{ price: { id: "price_annual" } }] },
+    });
+    constructEvent.mockReturnValue({
+      type: "invoice.paid",
+      id: "evt_33",
+      data: {
+        object: {
+          id: "in_conv_2",
+          subscription: "sub_7",
+          amount_paid: 2999,
+          currency: "usd",
+          billing_reason: "subscription_cycle",
+          customer_email: "a@b.com",
+        },
+      },
+    });
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+    expect(applyDeferredWinback).toHaveBeenCalledWith("sub_7");
+    // The conversion Purchase still fires alongside the deferred application.
+    expect(sendCapiPurchase).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not apply the deferred winback on invoice.paid without the marker", async () => {
+    subscriptionsRetrieve.mockResolvedValue({
+      metadata: { email: "a@b.com" },
+      items: { data: [{ price: { id: "price_annual" } }] },
+    });
+    constructEvent.mockReturnValue({
+      type: "invoice.paid",
+      id: "evt_34",
+      data: {
+        object: {
+          id: "in_conv_3",
+          subscription: "sub_7",
+          amount_paid: 2999,
+          currency: "usd",
+          billing_reason: "subscription_cycle",
+          customer_email: "a@b.com",
+        },
+      },
+    });
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+    expect(applyDeferredWinback).not.toHaveBeenCalled();
   });
 
   it("does not send CAPI on invoice.paid for the checkout-time invoice (subscription_create): that charge is already reported at checkout", async () => {

@@ -9,10 +9,12 @@ vi.mock("@/lib/stripe/client", () => ({
 
 const applyAnnualWinback = vi.fn().mockResolvedValue(undefined);
 const applyWeeklyPause = vi.fn().mockResolvedValue(undefined);
+const deferAnnualWinback = vi.fn().mockResolvedValue(undefined);
 const setCancelAtPeriodEnd = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/manage/stripeOps", () => ({
   applyAnnualWinback: (...a: unknown[]) => applyAnnualWinback(...a),
   applyWeeklyPause: (...a: unknown[]) => applyWeeklyPause(...a),
+  deferAnnualWinback: (...a: unknown[]) => deferAnnualWinback(...a),
   setCancelAtPeriodEnd: (...a: unknown[]) => setCancelAtPeriodEnd(...a),
 }));
 
@@ -57,6 +59,7 @@ beforeEach(() => {
   subsRetrieve.mockReset().mockResolvedValue(annualSub);
   applyAnnualWinback.mockClear();
   applyWeeklyPause.mockClear();
+  deferAnnualWinback.mockClear();
   setCancelAtPeriodEnd.mockClear();
   insertEvent.mockClear();
 });
@@ -71,9 +74,19 @@ describe("POST /api/manage/offer", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true, outcome: "saved_offer" });
     expect(applyAnnualWinback).toHaveBeenCalledWith("sub_1");
+    expect(deferAnnualWinback).not.toHaveBeenCalled();
     expect(insertEvent).toHaveBeenCalledWith(
       expect.objectContaining({ email: "a@b.c", plan: "annual", outcome: "saved_offer" }),
     );
+  });
+
+  it("defers the winback for a trialing annual subscription: full price year 1, coupon later", async () => {
+    subsRetrieve.mockResolvedValue({ ...annualSub, status: "trialing" });
+    const res = await offerPOST(req("offer", { token }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, outcome: "saved_offer" });
+    expect(deferAnnualWinback).toHaveBeenCalledWith("sub_1");
+    expect(applyAnnualWinback).not.toHaveBeenCalled();
   });
 
   it("pauses a weekly subscription instead", async () => {

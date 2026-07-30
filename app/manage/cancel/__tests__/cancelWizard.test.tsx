@@ -120,6 +120,19 @@ describe("CancelWizard", () => {
     expect(await screen.findByText(/take 30 days on us/i)).toBeTruthy();
   });
 
+  it("shows the deferred second-year offer for a trialing annual subscription", async () => {
+    seed({ ...annual, status: "trialing", trialing: true });
+    mockFetch();
+    render(<CancelWizard />);
+    advancePastSurvey();
+    fireEvent.click(await screen.findByText(/continue to cancel/i));
+    expect(await screen.findByText(/your second year for \$0\.99/i)).toBeTruthy();
+    expect(
+      screen.getByText(/renews at \$29\.99 on .* as scheduled/i),
+    ).toBeTruthy();
+    expect(screen.queryByText(/^Stay for \$0\.99$/)).toBeNull();
+  });
+
   it("skips the offer step when offerAvailable is false", async () => {
     seed({ ...annual, winbackRedeemed: true, offerAvailable: false });
     mockFetch();
