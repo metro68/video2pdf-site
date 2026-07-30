@@ -118,18 +118,114 @@ describe("stripe.fetchMetrics: web free trials", () => {
   });
 
   it("includes webActiveSubs (trialing + active) for the current month", async () => {
-    list.mockResolvedValueOnce({
-      data: [
-        { id: "sub_1", trial_start: null, status: "trialing" },
-        { id: "sub_2", trial_start: null, status: "active" },
-        { id: "sub_3", trial_start: null, status: "canceled" },
-      ],
-      has_more: false,
-    });
+    list
+      .mockResolvedValueOnce({
+        data: [
+          { id: "sub_1", trial_start: null, status: "trialing" },
+          { id: "sub_2", trial_start: null, status: "active" },
+          { id: "sub_3", trial_start: null, status: "canceled" },
+        ],
+        has_more: false,
+      })
+      // Second pass: the paying-subs (status: "active") listing.
+      .mockResolvedValueOnce({ data: [], has_more: false });
 
     const r = await fetchMetrics(undefined);
 
     expect(r.status).toBe("ok");
     expect(r.data?.webActiveSubs).toBe(2);
+  });
+});
+
+describe("stripe.fetchMetrics: paying subs and MRR/ARR", () => {
+  beforeEach(() => {
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_123");
+  });
+
+  const weeklySub = (id: string) => ({
+    id,
+    status: "active",
+    items: {
+      data: [{ quantity: 1, price: { unit_amount: 499, recurring: { interval: "week", interval_count: 1 } } }],
+    },
+  });
+  const annualSub = (id: string) => ({
+    id,
+    status: "active",
+    items: {
+      data: [{ quantity: 1, price: { unit_amount: 2999, recurring: { interval: "year", interval_count: 1 } } }],
+    },
+  });
+
+  it("computes mrr/arr for the current month from each active sub's actual plan price", async () => {
+    list
+      .mockResolvedValueOnce({ data: [], has_more: false }) // created-window pass
+      .mockResolvedValueOnce({
+        data: [annualSub("sub_a"), weeklySub("sub_w")],
+        has_more: false,
+      });
+
+    const r = await fetchMetrics(undefined);
+
+    expect(r.status).toBe("ok");
+    expect(r.data?.webPaidSubs).toBe(2);
+    // annual: 29.99/12 = 2.4992; weekly: 4.99 * 52/12 = 21.6233; sum rounds to 24.12.
+    expect(r.data?.mrr).toBe(24.12);
+    expect(r.data?.arr).toBe(289.44);
+  });
+
+  it("lists ALL active subs, not just ones created in the month window", async () => {
+    list
+      .mockResolvedValueOnce({ data: [], has_more: false })
+      .mockResolvedValueOnce({ data: [annualSub("sub_a")], has_more: false });
+
+    await fetchMetrics(undefined);
+
+    expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ status: "active" }));
+    expect(list).toHaveBeenLastCalledWith(expect.not.objectContaining({ created: expect.anything() }));
+  });
+
+  it("paginates the active-subs listing", async () => {
+    list
+      .mockResolvedValueOnce({ data: [], has_more: false })
+      .mockResolvedValueOnce({ data: [annualSub("sub_a")], has_more: true })
+      .mockResolvedValueOnce({ data: [weeklySub("sub_w")], has_more: false });
+
+    const r = await fetchMetrics(undefined);
+
+    expect(r.data?.webPaidSubs).toBe(2);
+    expect(r.data?.mrr).toBe(24.12);
+  });
+
+  it("skips items with missing price data instead of producing NaN", async () => {
+    list
+      .mockResolvedValueOnce({ data: [], has_more: false })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            id: "sub_x",
+            status: "active",
+            items: { data: [{ quantity: 1, price: { unit_amount: null, recurring: { interval: "year", interval_count: 1 } } }] },
+          },
+          annualSub("sub_a"),
+        ],
+        has_more: false,
+      });
+
+    const r = await fetchMetrics(undefined);
+
+    expect(r.data?.webPaidSubs).toBe(2);
+    expect(r.data?.mrr).toBe(2.5);
+  });
+
+  it("omits paying-sub fields for a past month and skips the active-subs call", async () => {
+    list.mockResolvedValueOnce({ data: [], has_more: false });
+
+    const r = await fetchMetrics("2026-06");
+
+    expect(r.data?.webPaidSubs).toBeUndefined();
+    expect(r.data?.mrr).toBeUndefined();
+    expect(r.data?.arr).toBeUndefined();
+    expect(list).toHaveBeenCalledTimes(1);
   });
 });

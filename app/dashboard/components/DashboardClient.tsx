@@ -90,7 +90,8 @@ export default function DashboardClient({ role }: { role: Role }) {
   // than a fake 0 in that case.
   const appstoreSubs = num("appstore", "paidSubs");
   const subsKnown = appstoreSubs !== undefined;
-  const mrr = (num("appstore", "mrr") ?? 0) + (num("play", "mrr") ?? 0);
+  const mrr =
+    (num("appstore", "mrr") ?? 0) + (num("play", "mrr") ?? 0) + (num("stripe", "mrr") ?? 0);
   const webFreeTrials = num("stripe", "webFreeTrials");
   const adSpend =
     (num("meta", "adSpend") ?? 0) +
@@ -164,16 +165,16 @@ export default function DashboardClient({ role }: { role: Role }) {
             <KpiTile
               label="MRR"
               value={subsKnown ? `$${mrr.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "n/a"}
-              description={`Monthly recurring revenue = active paid subscribers x $29.99/12 (US list price; other storefronts price differently, so this is an approximation). ${isCurrentMonth ? "Live snapshot." : `As of the end of ${monthLabel}; months older than ~30 days show n/a because Apple no longer retains the daily snapshot.`} Cancelled-but-not-lapsed subscribers are included; refunds are not.`}
-              sources={[CONSOLE.appstore, CONSOLE.play]}
+              description={`Monthly recurring revenue: store subscribers x $29.99/12 (US list price; other storefronts price differently, so this is an approximation), plus web subscribers who are past their trial and paying via Stripe, at each plan's actual price normalized to monthly. ${isCurrentMonth ? "Live snapshot." : `As of the end of ${monthLabel}; months older than ~30 days show n/a because Apple no longer retains the daily snapshot, and Stripe only contributes to the live snapshot.`} Cancelled-but-not-lapsed subscribers are included; refunds are not.`}
+              sources={[CONSOLE.appstore, CONSOLE.play, CONSOLE.stripe]}
             />
           ) : null}
           {role === "admin" ? (
             <KpiTile
               label="ARR"
               value={subsKnown ? `$${(mrr * 12).toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "n/a"}
-              description="Annual recurring revenue = MRR x 12. A projection of the MRR snapshot, not booked revenue."
-              sources={[CONSOLE.appstore, CONSOLE.play]}
+              description="Annual recurring revenue = MRR x 12, including web subscriptions that converted to paid via Stripe. A projection of the MRR snapshot, not booked revenue."
+              sources={[CONSOLE.appstore, CONSOLE.play, CONSOLE.stripe]}
             />
           ) : null}
         </section>
