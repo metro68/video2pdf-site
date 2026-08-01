@@ -66,11 +66,13 @@ export function Funnel() {
   const [scanType, setScanType] = useState<ScanType | null>(null);
   const [frequency, setFrequency] = useState<Frequency | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [src, setSrc] = useState("direct");
   const count = FUNNEL_CONFIG.socialProofCount.toLocaleString();
 
   useEffect(() => {
     track("ViewContent");
     const source = new URLSearchParams(window.location.search).get("src") ?? "direct";
+    setSrc(source);
     trackCustom("funnel_opened", { source });
   }, []);
 
@@ -263,6 +265,13 @@ export function Funnel() {
           onClick={() => {
             track("Lead");
             trackCustom("funnel_email_submitted");
+            // Fire-and-forget: lead capture must never block or error out the
+            // funnel, so no await and errors are swallowed.
+            fetch("/api/lead", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ email, scanType, frequency, src }),
+            }).catch(() => {});
             setStep("paywall");
           }}
           className="mt-6 w-full rounded-lg bg-brand-primary px-8 py-4 text-base font-semibold text-white disabled:opacity-40"

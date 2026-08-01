@@ -3,15 +3,25 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Funnel } from "@/app/go/components/Funnel";
 import * as pixel from "@/lib/pixel/events";
 
-const fetchMock = vi.fn(
-  async (): Promise<{ json: () => Promise<{ url?: string }> }> => ({
-    json: async () => ({ url: "https://checkout.test/s/1" }),
-  })
-);
+// The email step now also fires a fire-and-forget POST to /api/lead alongside
+// the checkout step's POST to /api/checkout, so the default mock routes by URL.
+// Tests that need to simulate a checkout failure override checkoutImpl rather
+// than fetchMock directly, so the /api/lead call (which the component never
+// awaits or reads the response of) is unaffected.
+let checkoutImpl: () => Promise<{ json: () => Promise<{ url?: string }> }> = async () => ({
+  json: async () => ({ url: "https://checkout.test/s/1" }),
+});
+const fetchMock = vi.fn(async (url: string) => {
+  if (url === "/api/lead") {
+    return { json: async () => ({ ok: true }) };
+  }
+  return checkoutImpl();
+});
 vi.stubGlobal("fetch", fetchMock);
 
 beforeEach(() => {
   fetchMock.mockClear();
+  checkoutImpl = async () => ({ json: async () => ({ url: "https://checkout.test/s/1" }) });
   vi.spyOn(pixel, "track").mockImplementation(() => {});
   vi.spyOn(pixel, "trackCustom").mockImplementation(() => {});
 });
@@ -105,6 +115,51 @@ describe("Funnel", () => {
     expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_email_submitted");
   });
 
+  it("posts the lead to /api/lead on the email step's Continue, without blocking the step advance", async () => {
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/lead",
+        expect.objectContaining({
+          method: "POST",
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+    const calls = (fetchMock as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
+    const leadCall = calls.find(([url]) => url === "/api/lead")!;
+    const body = JSON.parse(String(leadCall[1].body));
+    expect(body).toEqual({
+      email: "a@b.com",
+      scanType: "Documents",
+      frequency: "Weekly",
+      src: "direct",
+    });
+    // The paywall step is shown immediately; the lead POST does not block advancing.
+    expect(screen.getByText(/unlock video2pdf pro/i)).toBeInTheDocument();
+  });
+
+  it("includes the src query param in the lead POST", async () => {
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      value: { ...originalLocation, search: "?src=meta_ad_1" },
+      writable: true,
+    });
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/lead", expect.anything()));
+    const calls = (fetchMock as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
+    const leadCall = calls.find(([url]) => url === "/api/lead")!;
+    const body = JSON.parse(String(leadCall[1].body));
+    expect(body.src).toBe("meta_ad_1");
+    Object.defineProperty(window, "location", { value: originalLocation, writable: true });
+  });
+
   it("fires funnel_paywall_viewed when the paywall step is shown", () => {
     render(<Funnel />);
     goToQualify();
@@ -134,7 +189,7 @@ describe("Funnel", () => {
   it("fires funnel_checkout_error when checkout fails to return a url", async () => {
     const assign = vi.fn();
     Object.defineProperty(window, "location", { value: { assign, href: "", search: "" }, writable: true });
-    fetchMock.mockImplementationOnce(async () => ({ json: async () => ({}) }));
+    checkoutImpl = async () => ({ json: async () => ({}) });
     render(<Funnel />);
     goToQualify();
     answerQualifyTaps();
@@ -228,12 +283,13 @@ describe("Funnel", () => {
     answerQualifyTaps();
     capturEmailAndContinue();
     fireEvent.click(await screen.findByRole("button", { name: /weekly.*4\.99/i }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/checkout", expect.anything()));
     // fetchMock is typed arg-less for convenience; the component calls it with
     // (url, init), so the recorded call args are re-widened here to read the body.
     const calls = (fetchMock as unknown as { mock: { calls: [string, RequestInit][] } }).mock
       .calls;
-    const body = JSON.parse(String(calls[0][1].body));
+    const checkoutCall = calls.find(([url]) => url === "/api/checkout")!;
+    const body = JSON.parse(String(checkoutCall[1].body));
     expect(body.fbp).toBe("fb.1.111.222");
     expect(body.fbc).toBe("fb.1.111.IwAR333");
     document.cookie = "_fbp=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
@@ -258,14 +314,14 @@ describe("Funnel", () => {
   it("shows an error and re-enables the button when checkout fails to return a url", async () => {
     const assign = vi.fn();
     Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });
-    fetchMock.mockImplementationOnce(async () => ({ json: async () => ({}) }));
+    checkoutImpl = async () => ({ json: async () => ({}) });
     render(<Funnel />);
     goToQualify();
     answerQualifyTaps();
     capturEmailAndContinue();
     const weeklyButton = await screen.findByRole("button", { name: /weekly.*4\.99/i });
     fireEvent.click(weeklyButton);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/checkout", expect.anything()));
     await waitFor(() =>
       expect(screen.getByText(/something went wrong starting checkout/i)).toBeInTheDocument()
     );
@@ -276,16 +332,16 @@ describe("Funnel", () => {
   it("shows an error and re-enables the button when the checkout request throws", async () => {
     const assign = vi.fn();
     Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });
-    fetchMock.mockImplementationOnce(async () => {
+    checkoutImpl = async () => {
       throw new Error("network down");
-    });
+    };
     render(<Funnel />);
     goToQualify();
     answerQualifyTaps();
     capturEmailAndContinue();
     const weeklyButton = await screen.findByRole("button", { name: /weekly.*4\.99/i });
     fireEvent.click(weeklyButton);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/checkout", expect.anything()));
     await waitFor(() =>
       expect(screen.getByText(/something went wrong starting checkout/i)).toBeInTheDocument()
     );

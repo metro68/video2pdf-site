@@ -43,3 +43,15 @@ ALTER TABLE cancellation_events ENABLE ROW LEVEL SECURITY;
 -- redeem tokens) via the auto-generated REST/GraphQL API.
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE redeem_tokens ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS leads (
+  email TEXT PRIMARY KEY,
+  scan_type TEXT,
+  frequency TEXT,
+  src TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  reminder_sent_at TIMESTAMPTZ,
+  unsubscribed_at TIMESTAMPTZ
+);
+
+ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
