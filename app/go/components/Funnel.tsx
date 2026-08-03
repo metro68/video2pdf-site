@@ -298,8 +298,15 @@ export function Funnel() {
         <span className="inline-block rounded-full bg-brand-primary px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
           Summer deal
         </span>
-        <p className="mt-2 text-sm">
-          Lock in $29.99/year for life. Your price never goes up, ever.
+        <p className="mt-2 text-xl font-bold">
+          <s className="mr-2 font-normal text-brand-text-secondary">
+            ${Math.round((FUNNEL_CONFIG.plans.weekly.cents * 52) / 100)}/year
+          </s>
+          $29.99/year
+        </p>
+        <p className="mt-1 text-xs text-brand-text-secondary">
+          vs {FUNNEL_CONFIG.plans.weekly.price}/week billed weekly. Lock it in for
+          life, your price never goes up.
         </p>
       </div>
       {checkoutError && (
