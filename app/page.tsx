@@ -53,7 +53,9 @@ export default function HomePage() {
               </TrackedLink>
             </div>
             <p className="platform-note">Free on iPhone and Android</p>
-            <p className="hero-note">Free for 3 days, then $29.99/year. Cancel anytime.</p>
+            <p className="hero-note">
+              Summer deal: lock in $29.99/year for life. Free for 3 days, cancel anytime.
+            </p>
           </div>
           <div className="hero-art">
             <img
@@ -192,9 +194,10 @@ export default function HomePage() {
       </section>
 
       <section className="section" id="pricing">
-        <h2 className="section-title">One simple plan</h2>
+        <h2 className="section-title">Summer deal: lock in your price for life</h2>
         <p className="section-subtitle">
-          Try every feature free for 3 days. Keep it for about $2.50 a month, billed yearly.
+          Subscribe this summer and $29.99/year is your price forever. It never
+          increases on you. Try every feature free for 3 days.
         </p>
         <div className="pricing-wrap">
           <div className="pricing-card">
@@ -202,7 +205,7 @@ export default function HomePage() {
             <div className="price">
               $29.99 <small>/year</small>
             </div>
-            <div className="period">Billed annually · 3-day free trial</div>
+            <div className="period">Billed annually · 3-day free trial · price locked for life</div>
             <ul>
               <li>Unlimited scans and documents</li>
               <li>Full-resolution pages</li>

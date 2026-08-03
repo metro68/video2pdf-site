@@ -294,6 +294,14 @@ export function Funnel() {
           <li key={benefit}>{benefit}</li>
         ))}
       </ul>
+      <div className="mt-6 w-full rounded-lg border border-brand-primary/60 bg-brand-primary/10 p-4 text-center">
+        <span className="inline-block rounded-full bg-brand-primary px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
+          Summer deal
+        </span>
+        <p className="mt-2 text-sm">
+          Lock in $29.99/year for life. Your price never goes up, ever.
+        </p>
+      </div>
       {checkoutError && (
         <p role="alert" className="mt-6 w-full text-center text-sm text-red-500">
           {checkoutError}
