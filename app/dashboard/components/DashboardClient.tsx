@@ -44,6 +44,21 @@ export default function DashboardClient({ role }: { role: Role }) {
   const [metrics, setMetrics] = useState<Record<Provider, MetricResponse | null>>(
     () => Object.fromEntries(PROVIDERS.map((p) => [p, null])) as Record<Provider, MetricResponse | null>,
   );
+  const [totalDownloads, setTotalDownloads] = useState<MetricResponse | null>(null);
+
+  // All-time figure: independent of the month picker, so fetched once.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/metrics/downloads-total")
+      .then((r) => r.json() as Promise<MetricResponse>)
+      .catch(() => ({ status: "error", asOf: null, data: null }) as MetricResponse)
+      .then((res) => {
+        if (!cancelled) setTotalDownloads(res);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,6 +156,17 @@ export default function DashboardClient({ role }: { role: Role }) {
                 ? `First-time installs in ${monthLabel} so far, App Store + Google Play combined. Excludes updates, re-downloads, and in-app purchases. Lags 1-2 days behind.`
                 : `First-time installs in ${monthLabel}, App Store + Google Play combined. Excludes updates, re-downloads, and in-app purchases. A just-ended month can under-report until Apple publishes its monthly report (~5 days into the next month).`
             }
+            sources={[CONSOLE.appstore, CONSOLE.play]}
+          />
+          <KpiTile
+            label="Total downloads (all time)"
+            value={
+              totalDownloads?.status === "ok" &&
+              typeof totalDownloads.data?.downloads === "number"
+                ? totalDownloads.data.downloads.toLocaleString()
+                : "n/a"
+            }
+            description="Every first-time install since launch (April 2026), App Store + Google Play combined, through the latest reported day. Excludes updates, re-downloads, and in-app purchases. Not affected by the month picker; lags 1-2 days behind."
             sources={[CONSOLE.appstore, CONSOLE.play]}
           />
           <KpiTile

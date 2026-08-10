@@ -185,6 +185,37 @@ async function fetchRaw(window: MonthWindow): Promise<AppStoreRaw> {
   return { downloads, paidSubs };
 }
 
+// Yearly sales report for a completed year. Apple keeps yearly reports for ten
+// years (vs one year for monthly), so this is what makes an all-time downloads
+// total durable. Errors are reported as-is, never coerced to 0: the yearly
+// report only appears ~6 days after year end, and the caller falls back to
+// monthly reports until it does.
+export async function fetchYearlyDownloads(
+  year: string,
+): Promise<ConnectorResult<{ downloads: number }>> {
+  if (!hasCredentials()) {
+    return { data: null, asOf: null, status: "awaiting_credentials" };
+  }
+  const cacheKey = `${CACHE_KEY}:year:${year}`;
+  const cached = getCached<{ downloads: number }>(cacheKey);
+  if (cached) return { data: cached.value, asOf: cached.asOf, status: "ok" };
+  try {
+    const token = await appStoreToken();
+    const downloads = await fetchReport(token, {
+      "filter[frequency]": "YEARLY",
+      "filter[reportType]": "SALES",
+      "filter[reportSubType]": "SUMMARY",
+      "filter[vendorNumber]": process.env.APPSTORE_VENDOR_NUMBER!,
+      "filter[reportDate]": year,
+    }).then(parseSalesDownloads);
+    const data = { downloads };
+    const asOf = setCached(cacheKey, data, PAST_MONTH_TTL_MS);
+    return { data, asOf, status: "ok" };
+  } catch (e) {
+    return { data: null, asOf: null, status: "error", error: (e as Error).message };
+  }
+}
+
 export async function fetchMetrics(month?: string): Promise<ConnectorResult<Metrics>> {
   if (!hasCredentials()) {
     return { data: null, asOf: null, status: "awaiting_credentials" };

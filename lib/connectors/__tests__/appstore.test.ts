@@ -1,11 +1,13 @@
 // @vitest-environment node
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import {
   normalize,
   parseSalesDownloads,
   parseActiveSubscribers,
+  fetchYearlyDownloads,
 } from "@/lib/connectors/appstore";
 import { mrrFromSubs } from "@/lib/pricing";
+import { clearCache, setCached } from "@/lib/cache";
 
 describe("appstore.parseSalesDownloads", () => {
   it("counts only first-install rows, not IAP or updates", () => {
@@ -60,5 +62,42 @@ describe("appstore.normalize", () => {
     const m = normalize({ downloads: 0, paidSubs: 0 });
     expect(m.mrr).toBe(0);
     expect(m.arr).toBe(0);
+  });
+});
+
+describe("appstore.fetchYearlyDownloads", () => {
+  const ENV_KEYS = [
+    "APPSTORE_KEY_ID",
+    "APPSTORE_ISSUER_ID",
+    "APPSTORE_PRIVATE_KEY",
+    "APPSTORE_VENDOR_NUMBER",
+  ];
+
+  beforeEach(() => {
+    clearCache();
+    for (const k of ENV_KEYS) delete process.env[k];
+  });
+
+  it("returns awaiting_credentials with no keys", async () => {
+    const r = await fetchYearlyDownloads("2026");
+    expect(r.status).toBe("awaiting_credentials");
+    expect(r.data).toBeNull();
+  });
+
+  it("serves a cached year without hitting the network", async () => {
+    for (const k of ENV_KEYS) process.env[k] = "x";
+    setCached("connector:appstore:year:2026", { downloads: 123 });
+    const r = await fetchYearlyDownloads("2026");
+    expect(r.status).toBe("ok");
+    expect(r.data).toEqual({ downloads: 123 });
+  });
+
+  it("reports error, not zero, when the report fetch fails", async () => {
+    // Garbage credentials make the JWT signing throw; the caller relies on an
+    // error status (never a fake 0) to fall back to monthly reports.
+    for (const k of ENV_KEYS) process.env[k] = "x";
+    const r = await fetchYearlyDownloads("2026");
+    expect(r.status).toBe("error");
+    expect(r.data).toBeNull();
   });
 });
