@@ -1,10 +1,11 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { roleFromRequest, fetchAdInsights, fetchTrialCohort } = vi.hoisted(() => ({
+const { roleFromRequest, fetchAdInsights, fetchTrialCohort, fetchAppTrialEvents } = vi.hoisted(() => ({
   roleFromRequest: vi.fn(),
   fetchAdInsights: vi.fn(),
   fetchTrialCohort: vi.fn(),
+  fetchAppTrialEvents: vi.fn(),
 }));
 vi.mock("@/lib/session-role", () => ({ roleFromRequest }));
 vi.mock("@/lib/connectors/meta", async (importOriginal) => ({
@@ -14,6 +15,10 @@ vi.mock("@/lib/connectors/meta", async (importOriginal) => ({
 vi.mock("@/lib/connectors/stripe", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   fetchTrialCohort,
+}));
+vi.mock("@/lib/connectors/appsflyer", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  fetchAppTrialEvents,
 }));
 
 import { GET } from "@/app/api/ads-eval/route";
@@ -26,6 +31,8 @@ beforeEach(() => {
   roleFromRequest.mockReset();
   fetchAdInsights.mockReset();
   fetchTrialCohort.mockReset();
+  fetchAppTrialEvents.mockReset();
+  fetchAppTrialEvents.mockResolvedValue({ status: "ok", asOf: "x", data: [] });
 });
 
 describe("/api/ads-eval auth", () => {
