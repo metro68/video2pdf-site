@@ -4,6 +4,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { CHART_COLORS } from "@/lib/chart-theme";
 import type { AdsEvalPayload } from "@/lib/ads/assemble";
 import type { DerivedEconomics } from "@/lib/ads/economics";
+import { buildCohortChartSeries } from "@/lib/ads/chart";
 
 export default function CohortChart({
   daily,
@@ -16,25 +17,7 @@ export default function CohortChart({
   gbpPerUsd: number;
   modeling: boolean;
 }) {
-  let cumSpend = 0;
-  let cumTrials = 0;
-  let lastCollectedUsd = 0;
-  for (const d of daily) {
-    if (d.collectedUsd > 0) lastCollectedUsd = d.collectedUsd;
-  }
-  const collectedRevenueGbp = Number((lastCollectedUsd * gbpPerUsd).toFixed(2));
-  const points = daily.map((d, i) => {
-    cumSpend += d.spendGbp;
-    cumTrials += d.stripeTrials;
-    const expectedRevenueGbp =
-      cumTrials * economics.trialToPaid * economics.netRevenuePerPayerUsd * gbpPerUsd;
-    return {
-      label: d.date.slice(5),
-      spendGbp: Number(cumSpend.toFixed(2)),
-      expectedRevenueGbp: Number(expectedRevenueGbp.toFixed(2)),
-      collectedRevenueGbp: i === daily.length - 1 ? collectedRevenueGbp : undefined,
-    };
-  });
+  const points = buildCohortChartSeries(daily, economics, gbpPerUsd);
 
   return (
     <div className="rounded-xl bg-brand-bg-card border border-brand-border p-4">
@@ -85,11 +68,12 @@ export default function CohortChart({
       </ResponsiveContainer>
       <p className="mt-3 text-xs leading-snug text-brand-text-secondary">
         GBP per USD is a fixed constant set in assumptions ({gbpPerUsd.toFixed(2)}), not a live
-        exchange rate, so both lines move only when spend, trials, or assumptions change. Expected
-        revenue is a projection from trial-to-paid and price; it is not the same as collected
-        revenue, which is the actual amount Stripe has taken so far for this cohort and only
-        appears as a single dot on the final day, after Stripe fees but before any later refunds.
-        Refunds that happen after this window closes are not reflected here.
+        exchange rate, so both lines move only when spend, trials, or assumptions change. The
+        expected-revenue curve is shaped by cumulative trial starts day over day, then anchored so
+        its final point matches the projected total revenue shown in the P&amp;L tile; it is not
+        the same as collected revenue, which is the actual amount Stripe has taken so far for this
+        cohort and only appears as a single dot on the final day, after Stripe fees but before any
+        later refunds. Refunds that happen after this window closes are not reflected here.
       </p>
     </div>
   );

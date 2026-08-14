@@ -38,11 +38,19 @@ const BROKEN_MAX_PAYERS = 1;
 const BROKEN_OBSERVED_RATE = 0.2;
 const HEALTHY_OBSERVED_RATE = 0.4;
 
-export function deriveEconomics(facts: AdsFacts, a: AdsAssumptions): DerivedEconomics {
+export function deriveEconomics(
+  facts: AdsFacts,
+  a: AdsAssumptions,
+  opts?: { overrideCancelRate?: boolean },
+): DerivedEconomics {
   const { cohort } = facts;
   const observed = cohort.decided >= a.minDecidedForActuals;
   const observedTrialToPaid = cohort.decided > 0 ? cohort.payers / cohort.decided : null;
-  const trialToPaid = observed && observedTrialToPaid != null ? observedTrialToPaid : 1 - a.assumedTrialCancelRate;
+  // An override models the user's edited cancel rate even once real actuals
+  // exist; it is then the user's assumption driving trialToPaid, not Stripe's
+  // observed outcome, so trialToPaidSource must say "assumed" too.
+  const useObserved = observed && observedTrialToPaid != null && !opts?.overrideCancelRate;
+  const trialToPaid = useObserved ? observedTrialToPaid : 1 - a.assumedTrialCancelRate;
 
   const netRevenuePerPayerUsd = a.annualPriceUsd * (1 - a.stripeFeeRate) * (1 - a.refundRate);
   const breakEvenCpaGbp = netRevenuePerPayerUsd * trialToPaid * a.gbpPerUsd;
@@ -61,14 +69,14 @@ export function deriveEconomics(facts: AdsFacts, a: AdsAssumptions): DerivedEcon
   } else if (
     cpaGbp != null &&
     cpaGbp <= breakEvenCpaGbp &&
-    (!observed || trialToPaid >= HEALTHY_OBSERVED_RATE)
+    (!useObserved || trialToPaid >= HEALTHY_OBSERVED_RATE)
   ) {
     verdict = "working";
   }
 
   return {
     trialToPaid,
-    trialToPaidSource: observed ? "observed" : "assumed",
+    trialToPaidSource: useObserved ? "observed" : "assumed",
     observedTrialToPaid,
     breakEvenCpaGbp,
     cpaGbp,

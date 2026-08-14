@@ -7,6 +7,8 @@ import CohortChart from "@/app/dashboard/ads/components/CohortChart";
 import AdsEvalClient from "@/app/dashboard/ads/components/AdsEvalClient";
 import { ADS_ASSUMPTIONS } from "@/lib/ads/config";
 import { deriveEconomics } from "@/lib/ads/economics";
+import { assemblePayload } from "@/lib/ads/assemble";
+import type { TrialCohort } from "@/lib/connectors/stripe";
 
 const COHORT = { trials: 20, decided: 15, payers: 8, canceled: 7, pastDue: 0, pending: 5, collectedUsd: 239.92 };
 const FACTS = { spendGbp: 200, stripeTrials: 20, trialsLast7: 12, cohort: COHORT };
@@ -30,7 +32,7 @@ describe("AssumptionsPanel", () => {
   it("inputs are disabled until Edit is clicked, and Reset restores defaults", () => {
     const onChange = vi.fn();
     render(
-      <AssumptionsPanel value={ADS_ASSUMPTIONS} defaults={ADS_ASSUMPTIONS} observedRate={7 / 15} observedN={15} onChange={onChange} />,
+      <AssumptionsPanel value={ADS_ASSUMPTIONS} defaults={ADS_ASSUMPTIONS} observedCancelRate={8 / 15} observedN={15} onChange={onChange} />,
     );
     const price = screen.getByLabelText(/price/i) as HTMLInputElement;
     expect(price.disabled).toBe(true);
@@ -41,11 +43,15 @@ describe("AssumptionsPanel", () => {
     expect(onChange.mock.lastCall![0].annualPriceUsd).toBeCloseTo(39.99);
   });
 
-  it("shows the observed cancel rate helper", () => {
+  it("shows the observed cancel rate helper, not the paid rate", () => {
+    // 15 decided, 7 paid -> 8 canceled -> cancel rate is 8/15 (~53%), not 7/15 (~47%).
     render(
-      <AssumptionsPanel value={ADS_ASSUMPTIONS} defaults={ADS_ASSUMPTIONS} observedRate={7 / 15} observedN={15} onChange={() => {}} />,
+      <AssumptionsPanel value={ADS_ASSUMPTIONS} defaults={ADS_ASSUMPTIONS} observedCancelRate={8 / 15} observedN={15} onChange={() => {}} />,
     );
-    expect(screen.getByText(/observed cancel rate/i).textContent).toContain("n=15");
+    const helper = screen.getByText(/observed cancel rate/i).textContent ?? "";
+    expect(helper).toContain("n=15");
+    expect(helper).toContain("53%");
+    expect(helper).not.toContain("47%");
   });
 });
 
@@ -80,6 +86,33 @@ describe("AdsEvalClient", () => {
       expect(screen.getByText(/could not load ads data/i)).toBeTruthy();
     });
     expect(screen.getByRole("button", { name: /retry/i })).toBeTruthy();
+  });
+
+  it("prints the observed CANCEL rate next to the input, not the paid rate", async () => {
+    // 15 decided, 6 paid -> observed trial-to-paid is 6/15 = 40%, so the
+    // observed CANCEL rate must read 60%, never 40%.
+    const cohort: TrialCohort = {
+      trials: [],
+      aggregates: { trials: 20, decided: 15, payers: 6, canceled: 9, pastDue: 0, pending: 5, collectedUsd: 179.94 },
+      dailyTrials: [{ date: "2026-08-12", count: 20 }],
+    };
+    const payload = assemblePayload({
+      adRows: [],
+      cohort,
+      windowDays: 14,
+      now: new Date("2026-08-14T12:00:00Z"),
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(payload) }),
+    );
+    render(<AdsEvalClient />);
+    await waitFor(() => {
+      expect(screen.getByText(/observed cancel rate/i)).toBeTruthy();
+    });
+    const helper = screen.getByText(/observed cancel rate/i).textContent ?? "";
+    expect(helper).toContain("60%");
+    expect(helper).not.toContain("40%");
   });
 });
 

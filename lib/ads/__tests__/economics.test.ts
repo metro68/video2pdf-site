@@ -83,6 +83,31 @@ describe("deriveEconomics: verdict", () => {
   });
 });
 
+describe("deriveEconomics: overrideCancelRate", () => {
+  const COHORT_20_DECIDED = { trials: 20, decided: 20, payers: 10, canceled: 10, pastDue: 0, pending: 0, collectedUsd: 0 };
+
+  it("with 15+ decided and override true, trialToPaid equals the edited assumption, not the observed rate", () => {
+    const editedAssumptions = { ...A, assumedTrialCancelRate: 0.7 };
+    const d = deriveEconomics(facts({ cohort: COHORT_20_DECIDED }), editedAssumptions, { overrideCancelRate: true });
+    expect(d.trialToPaid).toBeCloseTo(1 - 0.7);
+    expect(d.trialToPaidSource).toBe("assumed");
+    // Observed rate is still reported for the UI's "observed: X%" helper text.
+    expect(d.observedTrialToPaid).toBeCloseTo(10 / 20);
+  });
+
+  it("with override false (default), the observed rate wins once actuals exist", () => {
+    const d = deriveEconomics(facts({ cohort: COHORT_20_DECIDED }), A);
+    expect(d.trialToPaid).toBeCloseTo(10 / 20);
+    expect(d.trialToPaidSource).toBe("observed");
+  });
+
+  it("server callers passing no opts are unaffected (assemble.ts behavior unchanged)", () => {
+    const withNoOpts = deriveEconomics(facts({ cohort: COHORT_20_DECIDED }), A);
+    const withExplicitFalse = deriveEconomics(facts({ cohort: COHORT_20_DECIDED }), A, { overrideCancelRate: false });
+    expect(withNoOpts).toEqual(withExplicitFalse);
+  });
+});
+
 describe("isModeling", () => {
   it("false when equal, true when any field differs", () => {
     expect(isModeling(A, A)).toBe(false);

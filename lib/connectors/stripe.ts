@@ -4,6 +4,8 @@ import type { ConnectorResult } from "@/lib/connectors/types";
 import { getStripe } from "@/lib/stripe/client";
 import { arrFromMrr } from "@/lib/pricing";
 import { resolveMonthWindow, type MonthWindow } from "@/lib/month";
+import { ADS_ASSUMPTIONS } from "@/lib/ads/config";
+import type { CohortAggregates } from "@/lib/ads/economics";
 
 function hasCredentials(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY);
@@ -126,9 +128,6 @@ export async function fetchMetrics(month?: string): Promise<ConnectorResult<Metr
     return { data: null, asOf: null, status: "error", error: (e as Error).message };
   }
 }
-
-import { ADS_ASSUMPTIONS } from "@/lib/ads/config";
-import type { CohortAggregates } from "@/lib/ads/economics";
 
 export interface MinimalSub {
   status: string;

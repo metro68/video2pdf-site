@@ -11,13 +11,14 @@ function pct(n: number): string {
 export default function AssumptionsPanel({
   value,
   defaults,
-  observedRate,
+  observedCancelRate,
   observedN,
   onChange,
 }: {
   value: AdsAssumptions;
   defaults: AdsAssumptions;
-  observedRate: number | null;
+  /** Observed cancel rate (1 - observed trial-to-paid), not the paid rate. */
+  observedCancelRate: number | null;
   observedN: number;
   onChange: (a: AdsAssumptions) => void;
 }) {
@@ -87,9 +88,9 @@ export default function AssumptionsPanel({
             onChange={(e) => set("assumedTrialCancelRate", num(e.target.value) / 100)}
             className="rounded-lg border border-brand-border bg-brand-bg px-2 py-1.5 text-sm text-brand-text disabled:opacity-60"
           />
-          {observedRate != null ? (
+          {observedCancelRate != null ? (
             <span className="text-brand-text-secondary">
-              observed cancel rate: {pct(observedRate)} (n={observedN})
+              observed cancel rate: {pct(observedCancelRate)} (n={observedN})
             </span>
           ) : null}
         </label>

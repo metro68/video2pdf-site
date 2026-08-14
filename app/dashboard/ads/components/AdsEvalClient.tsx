@@ -90,9 +90,14 @@ export default function AdsEvalClient() {
     );
   }
 
-  const economics = deriveEconomics(payload.facts, assumptions);
+  const overrideCancelRate = assumptions.assumedTrialCancelRate !== payload.assumptions.assumedTrialCancelRate;
+  const economics = deriveEconomics(payload.facts, assumptions, { overrideCancelRate });
   const modeling = isModeling(assumptions, payload.assumptions);
-  const observedRate = economics.observedTrialToPaid;
+  // AssumptionsPanel labels this input "cancel rate", so the helper text next
+  // to it must report the observed CANCEL rate, not the observed PAID
+  // (trial-to-paid) rate; economics only carries the paid rate, so invert it
+  // here, null-safe.
+  const observedCancelRate = economics.observedTrialToPaid != null ? 1 - economics.observedTrialToPaid : null;
   const observedN = payload.facts.cohort.decided;
   const metaErrorMsg = humanError(payload.errors.meta);
   const stripeErrorMsg = humanError(payload.errors.stripe);
@@ -147,7 +152,12 @@ export default function AdsEvalClient() {
           <KpiTile
             label="Spend"
             value={`£${payload.facts.spendGbp.toFixed(2)}`}
-            description={`Total Meta spend across all ads in this ${payload.windowDays}-day window (${payload.from} to ${payload.to}).`}
+            description={`Total Meta spend across all ads in this ${payload.windowDays}-day window (${payload.from} to ${payload.to}). From Meta's reporting API; can lag a few hours.`}
+          />
+          <KpiTile
+            label="Trial starts"
+            value={payload.facts.cohort.trials.toLocaleString()}
+            description="Stripe subscriptions with a trial_start in this window. Stripe is live; this includes every trial regardless of whether it has been decided yet."
           />
           <KpiTile
             label="CPA"
@@ -155,16 +165,31 @@ export default function AdsEvalClient() {
             description="Spend divided by Stripe trials started in this window. n/a when no trials started yet."
           />
           <KpiTile
-            label="Break-even CPA"
-            value={`£${economics.breakEvenCpaGbp.toFixed(2)}`}
-            description="The most a trial can cost in ad spend and still be profitable, given the current price, trial-to-paid rate, Stripe fee, and refund rate assumptions."
-            freshness={modeling ? "MODELING" : undefined}
+            label="Decided trials"
+            value={payload.facts.cohort.decided.toLocaleString()}
+            description="Trials that have either converted to paid or canceled. A trial is decided once it is past the 3-day trial window, or it canceled earlier. Stripe is live."
           />
           <KpiTile
             label="Trial to paid"
             value={`${Math.round(economics.trialToPaid * 100)}%`}
             description="Below 15 decided trials this shows the assumed rate, not data. A decided trial has either converted to paid or canceled; pending trials are excluded from this rate."
             freshness={trialToPaidBadge}
+          />
+          <KpiTile
+            label="Payers"
+            value={payload.facts.cohort.payers.toLocaleString()}
+            description="Decided trials that converted to a paid subscription. Stripe is live."
+          />
+          <KpiTile
+            label="Revenue collected"
+            value={`$${payload.facts.cohort.collectedUsd.toFixed(2)}`}
+            description="Actual amount Stripe has taken so far for this cohort, after Stripe fees but before any later refunds. Stripe is live; USD, not converted."
+          />
+          <KpiTile
+            label="Break-even CPA"
+            value={`£${economics.breakEvenCpaGbp.toFixed(2)}`}
+            description="The most a trial can cost in ad spend and still be profitable, given the current price, trial-to-paid rate, Stripe fee, and refund rate assumptions."
+            freshness={modeling ? "MODELING" : undefined}
           />
           <KpiTile
             label="Projected P&amp;L"
@@ -177,7 +202,7 @@ export default function AdsEvalClient() {
         <AssumptionsPanel
           value={assumptions}
           defaults={payload.assumptions}
-          observedRate={observedRate}
+          observedCancelRate={observedCancelRate}
           observedN={observedN}
           onChange={setAssumptions}
         />
