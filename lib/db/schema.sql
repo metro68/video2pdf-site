@@ -55,3 +55,15 @@ CREATE TABLE IF NOT EXISTS leads (
 );
 
 ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
+
+-- Durable connector cache: survives serverless cold starts and deploys, so
+-- rate-limited APIs (AppsFlyer aggregate reports) are called a handful of
+-- times per day instead of once per instance. Values are whole connector
+-- payloads; staleness policy lives in the reading code.
+CREATE TABLE IF NOT EXISTS metric_cache (
+  key TEXT PRIMARY KEY,
+  value JSONB NOT NULL,
+  as_of TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE metric_cache ENABLE ROW LEVEL SECURITY;

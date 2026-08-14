@@ -1,10 +1,21 @@
 // @vitest-environment node
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { clearCache } from "@/lib/cache";
 import { parseTrialEventsCsv, fetchAppTrialEvents } from "@/lib/connectors/appsflyer";
 
+const { getDurableCache, setDurableCache } = vi.hoisted(() => ({
+  getDurableCache: vi.fn(),
+  setDurableCache: vi.fn(),
+}));
+vi.mock("@/lib/db/metricCache", () => ({ getDurableCache, setDurableCache }));
+
 beforeEach(() => {
   clearCache();
+  getDurableCache.mockReset();
+  getDurableCache.mockResolvedValue(null);
+  setDurableCache.mockReset();
+  setDurableCache.mockResolvedValue(undefined);
+  vi.unstubAllGlobals();
   delete process.env.APPSFLYER_API_TOKEN;
   delete process.env.APPSFLYER_IOS_APP_ID;
   delete process.env.APPSFLYER_ANDROID_APP_ID;
@@ -38,5 +49,40 @@ describe("fetchAppTrialEvents", () => {
     const r = await fetchAppTrialEvents();
     expect(r.status).toBe("awaiting_credentials");
     expect(r.data).toBeNull();
+  });
+
+  it("serves a fresh durable copy without calling the API", async () => {
+    process.env.APPSFLYER_API_TOKEN = "t";
+    process.env.APPSFLYER_ANDROID_APP_ID = "com.app";
+    const rows = [{ date: "2026-08-14", trials: 2 }];
+    getDurableCache.mockResolvedValue({ value: rows, asOf: new Date().toISOString() });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const r = await fetchAppTrialEvents();
+    expect(r.status).toBe("ok");
+    expect(r.data).toEqual(rows);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("falls back to a stale durable copy when the API is rate limited", async () => {
+    process.env.APPSFLYER_API_TOKEN = "t";
+    process.env.APPSFLYER_ANDROID_APP_ID = "com.app";
+    const rows = [{ date: "2026-08-13", trials: 1 }];
+    const staleAsOf = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    getDurableCache.mockResolvedValue({ value: rows, asOf: staleAsOf });
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, status: 403, text: async () => "Limit reached" })));
+    const r = await fetchAppTrialEvents();
+    expect(r.status).toBe("ok");
+    expect(r.data).toEqual(rows);
+    expect(r.asOf).toBe(staleAsOf);
+  });
+
+  it("errors only when the API fails and no durable copy exists", async () => {
+    process.env.APPSFLYER_API_TOKEN = "t";
+    process.env.APPSFLYER_ANDROID_APP_ID = "com.app";
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, status: 403, text: async () => "Limit reached" })));
+    const r = await fetchAppTrialEvents();
+    expect(r.status).toBe("error");
+    expect(r.error).toContain("403");
   });
 });

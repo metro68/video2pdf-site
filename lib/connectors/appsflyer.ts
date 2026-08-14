@@ -101,12 +101,28 @@ export function parseTrialEventsCsv(csv: string): AppTrialDay[] {
 
 const TRIALS_CACHE_KEY = "connector:appsflyer:app-trials";
 const APP_TRIALS_DAYS = 30;
+const TRIALS_FRESH_MS = 6 * 60 * 60 * 1000;
 
-/** Trailing-30-day ad-attributed app trial starts per day, both platforms. */
+/**
+ * Trailing-30-day ad-attributed app trial starts per day, both platforms.
+ *
+ * AppsFlyer's aggregate Pull API has a small daily quota per report type, and
+ * the in-memory cache dies with every serverless instance, so results are
+ * also persisted in Postgres. Read order: memory, then durable-if-fresh, then
+ * the API; a failed API call (typically "Limit reached") serves the durable
+ * copy at any age rather than erroring, because six-hour-old trial counts
+ * beat zeros.
+ */
 export async function fetchAppTrialEvents(): Promise<ConnectorResult<AppTrialDay[]>> {
   if (!hasCredentials()) return { data: null, asOf: null, status: "awaiting_credentials" };
   const cached = getCached<AppTrialDay[]>(TRIALS_CACHE_KEY);
   if (cached) return { data: cached.value, asOf: cached.asOf, status: "ok" };
+  const { getDurableCache, setDurableCache } = await import("@/lib/db/metricCache");
+  const durable = await getDurableCache<AppTrialDay[]>(TRIALS_CACHE_KEY);
+  if (durable && Date.now() - new Date(durable.asOf).getTime() < TRIALS_FRESH_MS) {
+    setCached(TRIALS_CACHE_KEY, durable.value, TRIALS_FRESH_MS);
+    return { data: durable.value, asOf: durable.asOf, status: "ok" };
+  }
   try {
     const token = process.env.APPSFLYER_API_TOKEN!;
     const day = (d: Date) => d.toISOString().slice(0, 10);
@@ -134,8 +150,14 @@ export async function fetchAppTrialEvents(): Promise<ConnectorResult<AppTrialDay
       .sort((a, b) => (a.date < b.date ? -1 : 1));
     // Same quota concern as fetchMetrics: long TTL keeps agg-data calls rare.
     const asOf = setCached(TRIALS_CACHE_KEY, data, CURRENT_TTL_MS);
+    await setDurableCache(TRIALS_CACHE_KEY, data);
     return { data, asOf, status: "ok" };
   } catch (e) {
+    // Quota exhausted or transient failure: any durable copy beats zeros.
+    if (durable) {
+      setCached(TRIALS_CACHE_KEY, durable.value, TRIALS_FRESH_MS);
+      return { data: durable.value, asOf: durable.asOf, status: "ok" };
+    }
     return { data: null, asOf: null, status: "error", error: (e as Error).message };
   }
 }
