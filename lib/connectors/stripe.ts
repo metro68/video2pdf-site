@@ -183,8 +183,12 @@ export async function fetchTrialCohort(
     let startingAfter: string | undefined;
     let hasMore = true;
     while (hasMore) {
+      // Cohort membership is by trial_start; in this product trials are only
+      // created via Checkout with trial_period_days, so created and trial_start
+      // coincide and the created filter is a safe, efficient page bound. The
+      // in-loop trial_start filter remains the source of truth.
       const page = await getStripe().subscriptions.list({
-        created: { gte },
+        created: { gte, lte },
         status: "all",
         limit: 100,
         ...(startingAfter ? { starting_after: startingAfter } : {}),
