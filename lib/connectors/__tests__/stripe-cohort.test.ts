@@ -84,4 +84,21 @@ describe("fetchTrialCohort", () => {
     const r = await fetchTrialCohort("2026-08-01", "2026-08-14");
     expect(r.status).toBe("awaiting_credentials");
   });
+
+  it("excludes internal test customers and deleted customers from the cohort", async () => {
+    list.mockResolvedValueOnce({
+      data: [
+        sub({ id: "real", status: "active", trial_start: NOW - 6 * DAY, customer: { id: "cus_1", name: "Jane Doe" } }),
+        sub({ id: "test1", status: "canceled", trial_start: NOW - 6 * DAY, customer: { id: "cus_2", name: "Ikenna Orabueze" } }),
+        sub({ id: "test2", status: "canceled", trial_start: NOW - 5 * DAY, customer: { id: "cus_3", name: "ikenna orabueze" } }),
+        sub({ id: "gone", status: "canceled", trial_start: NOW - 5 * DAY, customer: { id: "cus_4", deleted: true } }),
+      ],
+      has_more: false,
+    });
+    const r = await fetchTrialCohort("2026-08-01", "2026-08-14");
+    const agg = r.data!.aggregates;
+    expect(agg.trials).toBe(1);
+    expect(agg.payers).toBe(1);
+    expect(agg.canceled).toBe(0);
+  });
 });

@@ -135,6 +135,20 @@ export interface MinimalSub {
   items: { data: Array<{ price?: { unit_amount: number | null } | null; quantity?: number | null }> };
 }
 
+// Internal test checkouts share these customer names. Their subscriptions are
+// excluded from the ads-eval cohort so test runs never distort trial-to-paid.
+// Deleted customers are excluded too: real customers are never deleted here,
+// so a deleted customer can only be a cleaned-up test account.
+const TEST_CUSTOMER_NAMES = ["ikenna orabueze"];
+
+export function isTestCustomer(customer: unknown): boolean {
+  if (customer == null || typeof customer !== "object") return false;
+  const c = customer as { deleted?: boolean; name?: string | null };
+  if (c.deleted === true) return true;
+  const name = (c.name ?? "").trim().toLowerCase();
+  return name.length > 0 && TEST_CUSTOMER_NAMES.includes(name);
+}
+
 export interface TrialRecord {
   startedAt: string;
   decided: boolean;
@@ -190,10 +204,12 @@ export async function fetchTrialCohort(
         created: { gte, lte },
         status: "all",
         limit: 100,
+        expand: ["data.customer"],
         ...(startingAfter ? { starting_after: startingAfter } : {}),
       });
       for (const sub of page.data) {
         if (sub.trial_start == null || sub.trial_start < gte || sub.trial_start > lte) continue;
+        if (isTestCustomer(sub.customer)) continue;
         trials.push(classifyTrial(sub as unknown as MinimalSub, nowSec, trialDays));
       }
       hasMore = page.has_more;
