@@ -27,7 +27,11 @@ function firstCallArgs(): {
   mode: string;
   customer_email: string;
   line_items: { price: string; quantity: number }[];
-  subscription_data: { trial_period_days?: number; metadata: { email: string } };
+  metadata: Record<string, string>;
+  subscription_data: {
+    trial_period_days?: number;
+    metadata: Record<string, string>;
+  };
   success_url: string;
 } {
   const call = create.mock.calls[0];
@@ -74,5 +78,27 @@ describe("POST /api/checkout", () => {
     await POST(req({ plan: "weekly", email: "a@b.com" }));
     const args = firstCallArgs();
     expect(args.success_url).toContain("session_id={CHECKOUT_SESSION_ID}");
+  });
+
+  it("passes utm fields into session and subscription metadata", async () => {
+    await POST(req({
+      plan: "annual",
+      email: "a@b.com",
+      utmCampaign: "aug-ugc",
+      utmContent: "120210000001",
+    }));
+    const args = firstCallArgs();
+    expect(args.metadata.utm_campaign).toBe("aug-ugc");
+    expect(args.metadata.utm_content).toBe("120210000001");
+    expect(args.subscription_data.metadata.utm_campaign).toBe("aug-ugc");
+    expect(args.subscription_data.metadata.utm_content).toBe("120210000001");
+  });
+
+  it("omits utm keys when the fields are absent or invalid", async () => {
+    await POST(req({ plan: "annual", email: "a@b.com", utmCampaign: 42 }));
+    const args = firstCallArgs();
+    expect(args.metadata.utm_campaign).toBeUndefined();
+    expect(args.metadata.utm_content).toBeUndefined();
+    expect(args.subscription_data.metadata.utm_campaign).toBeUndefined();
   });
 });

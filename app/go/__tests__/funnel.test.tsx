@@ -160,6 +160,40 @@ describe("Funnel", () => {
     Object.defineProperty(window, "location", { value: originalLocation, writable: true });
   });
 
+  it("carries utm_campaign and utm_content from the URL into both the lead src and the checkout body", async () => {
+    const assign = vi.fn();
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      value: {
+        ...originalLocation,
+        assign,
+        href: "",
+        search: "?src=meta&utm_campaign=aug-ugc&utm_content=120210000001",
+      },
+      writable: true,
+    });
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/lead", expect.anything()));
+    const leadCalls = (fetchMock as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
+    const leadCall = leadCalls.find(([url]) => url === "/api/lead")!;
+    const leadBody = JSON.parse(String(leadCall[1].body));
+    expect(leadBody.src).toBe("meta|c:aug-ugc|a:120210000001");
+
+    fireEvent.click(await screen.findByRole("button", { name: /weekly.*4\.99/i }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/checkout", expect.anything()));
+    const checkoutCalls = (fetchMock as unknown as { mock: { calls: [string, RequestInit][] } }).mock
+      .calls;
+    const checkoutCall = checkoutCalls.find(([url]) => url === "/api/checkout")!;
+    const checkoutBody = JSON.parse(String(checkoutCall[1].body));
+    expect(checkoutBody.utmCampaign).toBe("aug-ugc");
+    expect(checkoutBody.utmContent).toBe("120210000001");
+
+    Object.defineProperty(window, "location", { value: originalLocation, writable: true });
+  });
+
   it("fires funnel_paywall_viewed when the paywall step is shown", () => {
     render(<Funnel />);
     goToQualify();
