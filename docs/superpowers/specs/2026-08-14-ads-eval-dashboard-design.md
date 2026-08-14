@@ -91,7 +91,7 @@ Cumulative spend vs cumulative revenue (collected + expected from pending trials
 
 ### 4. Per-ad table
 
-One row per ad (active or with spend in window): spend, impressions, CTR, CPC, funnel columns (link clicks -> content views -> leads -> checkouts started -> trials), CPA, flags (chips): `swap candidate`, `learning reset <date>`, `top performer`.
+One row per ad (active or with spend in window): spend, impressions, CTR, CPC, funnel columns (link clicks -> content views -> leads -> checkouts started -> trials), CPA, flags (chips): `swap candidate`, `top performer`. (Amended at planning: the per-row `learning reset <date>` chip is dropped for v1; ad-level insights carry no learning-stage info, and the account-level learning-phase caveat in the verdict banner covers the same risk.)
 
 Context note: funnel columns are Meta pixel events attributed per ad by Meta (7-day click / 1-day view), so they restate for ~72h and will not exactly match Stripe or the leads table; trials here are pixel-attributed, the economics panels use Stripe truth.
 
