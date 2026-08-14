@@ -26,17 +26,8 @@ beforeEach(() => {
   vi.spyOn(pixel, "trackCustom").mockImplementation(() => {});
 });
 
-function goToQualify() {
+function goToEmail() {
   fireEvent.click(screen.getByRole("button", { name: /get started/i }));
-}
-
-function answerQualifyTaps() {
-  // Question 1: what do you scan most
-  fireEvent.click(screen.getByRole("button", { name: /documents/i }));
-  fireEvent.click(screen.getByRole("button", { name: /continue/i }));
-  // Question 2: how often
-  fireEvent.click(screen.getByRole("button", { name: /weekly/i }));
-  fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 }
 
 function capturEmailAndContinue() {
@@ -68,57 +59,26 @@ describe("Funnel", () => {
 
   it("fires funnel_get_started on landing CTA click", () => {
     render(<Funnel />);
-    goToQualify();
+    goToEmail();
     expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_get_started");
-  });
-
-  it("fires funnel_scan_type_selected and funnel_qualify1_completed through qualify1", () => {
-    render(<Funnel />);
-    goToQualify();
-    fireEvent.click(screen.getByRole("button", { name: /documents/i }));
-    expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_scan_type_selected", {
-      scan_type: "Documents",
-    });
-    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
-    expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_qualify1_completed", {
-      scan_type: "Documents",
-    });
-  });
-
-  it("fires funnel_frequency_selected and funnel_qualify2_completed through qualify2", () => {
-    render(<Funnel />);
-    goToQualify();
-    fireEvent.click(screen.getByRole("button", { name: /documents/i }));
-    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
-    fireEvent.click(screen.getByRole("button", { name: /weekly/i }));
-    expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_frequency_selected", {
-      frequency: "Weekly",
-    });
-    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
-    expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_qualify2_completed", {
-      frequency: "Weekly",
-    });
   });
 
   it("fires funnel_email_step_viewed when the email step is shown", () => {
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_email_step_viewed");
   });
 
   it("fires funnel_email_submitted alongside Lead", () => {
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_email_submitted");
   });
 
   it("posts the lead to /api/lead on the email step's Continue, without blocking the step advance", async () => {
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
@@ -134,8 +94,6 @@ describe("Funnel", () => {
     const body = JSON.parse(String(leadCall[1].body));
     expect(body).toEqual({
       email: "a@b.com",
-      scanType: "Documents",
-      frequency: "Weekly",
       src: "direct",
     });
     // The paywall step is shown immediately; the lead POST does not block advancing.
@@ -149,8 +107,7 @@ describe("Funnel", () => {
       writable: true,
     });
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/lead", expect.anything()));
     const calls = (fetchMock as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
@@ -173,8 +130,7 @@ describe("Funnel", () => {
       writable: true,
     });
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/lead", expect.anything()));
     const leadCalls = (fetchMock as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
@@ -201,8 +157,7 @@ describe("Funnel", () => {
       writable: true,
     });
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/lead", expect.anything()));
     const leadCalls = (fetchMock as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
@@ -219,8 +174,7 @@ describe("Funnel", () => {
       writable: true,
     });
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/lead", expect.anything()));
     const leadCalls = (fetchMock as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
@@ -232,8 +186,7 @@ describe("Funnel", () => {
 
   it("fires funnel_paywall_viewed when the paywall step is shown", () => {
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_paywall_viewed");
   });
@@ -242,8 +195,7 @@ describe("Funnel", () => {
     const assign = vi.fn();
     Object.defineProperty(window, "location", { value: { assign, href: "", search: "" }, writable: true });
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     fireEvent.click(await screen.findByRole("button", { name: /weekly.*4\.99/i }));
     expect(pixel.trackCustom).toHaveBeenCalledWith("funnel_plan_selected", {
@@ -261,8 +213,7 @@ describe("Funnel", () => {
     Object.defineProperty(window, "location", { value: { assign, href: "", search: "" }, writable: true });
     checkoutImpl = async () => ({ json: async () => ({}) });
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     const weeklyButton = await screen.findByRole("button", { name: /weekly.*4\.99/i });
     fireEvent.click(weeklyButton);
@@ -271,20 +222,9 @@ describe("Funnel", () => {
     );
   });
 
-  it("renders the qualify taps and lets the user select an option", () => {
-    render(<Funnel />);
-    goToQualify();
-    expect(screen.getByText(/what do you scan most/i)).toBeInTheDocument();
-    const documentsBtn = screen.getByRole("button", { name: /documents/i });
-    expect(documentsBtn).toBeInTheDocument();
-    fireEvent.click(documentsBtn);
-    expect(documentsBtn).toHaveAttribute("aria-pressed", "true");
-  });
-
   it("shows the social-proof anchor and pricing on the paywall", async () => {
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     await waitFor(() => expect(screen.getByText(/12,000\+/)).toBeInTheDocument());
     expect(screen.getByText("$4.99")).toBeInTheDocument();
@@ -294,8 +234,7 @@ describe("Funnel", () => {
 
   it("shows the trial wording on the annual plan and not on weekly", async () => {
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     const weeklyButton = await screen.findByRole("button", { name: /weekly.*4\.99/i });
     const annualButton = await screen.findByRole("button", { name: /3-day free trial.*29\.99/i });
@@ -308,8 +247,7 @@ describe("Funnel", () => {
     const assign = vi.fn();
     Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     expect(pixel.track).toHaveBeenCalledWith("Lead");
     fireEvent.click(await screen.findByRole("button", { name: /weekly.*4\.99/i }));
@@ -322,8 +260,7 @@ describe("Funnel", () => {
     const assign = vi.fn();
     Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     fireEvent.click(await screen.findByRole("button", { name: /3-day free trial.*29\.99/i }));
     expect(pixel.track).toHaveBeenCalledWith("InitiateCheckout", { value: 29.99, currency: "USD" });
@@ -335,8 +272,7 @@ describe("Funnel", () => {
     const assign = vi.fn();
     Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     fireEvent.click(await screen.findByRole("button", { name: /3-day free trial.*29\.99/i }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
@@ -349,8 +285,7 @@ describe("Funnel", () => {
     document.cookie = "_fbp=fb.1.111.222";
     document.cookie = "_fbc=fb.1.111.IwAR333";
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     fireEvent.click(await screen.findByRole("button", { name: /weekly.*4\.99/i }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/checkout", expect.anything()));
@@ -370,8 +305,7 @@ describe("Funnel", () => {
     const assign = vi.fn();
     Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     fireEvent.click(await screen.findByRole("button", { name: /weekly.*4\.99/i }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
@@ -386,8 +320,7 @@ describe("Funnel", () => {
     Object.defineProperty(window, "location", { value: { assign, href: "" }, writable: true });
     checkoutImpl = async () => ({ json: async () => ({}) });
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     const weeklyButton = await screen.findByRole("button", { name: /weekly.*4\.99/i });
     fireEvent.click(weeklyButton);
@@ -406,8 +339,7 @@ describe("Funnel", () => {
       throw new Error("network down");
     };
     render(<Funnel />);
-    goToQualify();
-    answerQualifyTaps();
+    goToEmail();
     capturEmailAndContinue();
     const weeklyButton = await screen.findByRole("button", { name: /weekly.*4\.99/i });
     fireEvent.click(weeklyButton);

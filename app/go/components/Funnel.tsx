@@ -5,15 +5,12 @@ import { FUNNEL_CONFIG, finePrint } from "@/lib/funnel/config";
 import { track, trackCustom } from "@/lib/pixel/events";
 import "../funnel.css";
 
-type Step = "landing" | "qualify1" | "qualify2" | "email" | "paywall";
+// The qualify quiz steps were cut on 2026-08-15: funnel data showed 85% of
+// paid landings never reached the email gate, so the flow is now the shortest
+// path to email and paywall.
+type Step = "landing" | "email" | "paywall";
 
-const STEPS: Step[] = ["landing", "qualify1", "qualify2", "email", "paywall"];
-
-const SCAN_TYPES = ["Documents", "Whiteboards", "Receipts", "Books"] as const;
-type ScanType = (typeof SCAN_TYPES)[number];
-
-const FREQUENCIES = ["Daily", "Weekly", "Sometimes"] as const;
-type Frequency = (typeof FREQUENCIES)[number];
+const STEPS: Step[] = ["landing", "email", "paywall"];
 
 function readCookie(name: string): string | undefined {
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
@@ -63,8 +60,6 @@ export function Funnel() {
   const [step, setStep] = useState<Step>("landing");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
-  const [scanType, setScanType] = useState<ScanType | null>(null);
-  const [frequency, setFrequency] = useState<Frequency | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [src, setSrc] = useState("direct");
   const [utmCampaign, setUtmCampaign] = useState("");
@@ -160,99 +155,11 @@ export function Funnel() {
         <button
           onClick={() => {
             trackCustom("funnel_get_started");
-            setStep("qualify1");
+            setStep("email");
           }}
           className="mt-8 w-full rounded-lg bg-brand-primary px-8 py-4 text-base font-semibold text-white"
         >
           Get started
-        </button>
-      </Shell>
-    );
-  }
-
-  if (step === "qualify1") {
-    return (
-      <Shell step={step}>
-        <div className="flex w-full items-start gap-3">
-          <img
-            src="/assets/bindy.png"
-            alt=""
-            className="bindy-peek h-auto w-14 shrink-0"
-          />
-          <h2 className="mt-2 text-xl font-semibold">What do you scan most?</h2>
-        </div>
-        <div className="mt-6 grid w-full grid-cols-2 gap-3">
-          {SCAN_TYPES.map((type) => (
-            <button
-              key={type}
-              onClick={() => {
-                setScanType(type);
-                trackCustom("funnel_scan_type_selected", { scan_type: type });
-              }}
-              aria-pressed={scanType === type}
-              className={`rounded-lg border px-4 py-4 text-sm font-medium ${
-                scanType === type
-                  ? "border-brand-primary bg-brand-primary/20 text-brand-text"
-                  : "border-brand-border bg-brand-bg-card text-brand-text-secondary"
-              }`}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
-        <button
-          disabled={!scanType}
-          onClick={() => {
-            trackCustom("funnel_qualify1_completed", { scan_type: scanType });
-            setStep("qualify2");
-          }}
-          className="mt-8 w-full rounded-lg bg-brand-primary px-8 py-4 text-base font-semibold text-white disabled:opacity-40"
-        >
-          Continue
-        </button>
-      </Shell>
-    );
-  }
-
-  if (step === "qualify2") {
-    return (
-      <Shell step={step}>
-        <div className="flex w-full items-start gap-3">
-          <img
-            src="/assets/bindy.png"
-            alt=""
-            className="bindy-peek h-auto w-14 shrink-0"
-          />
-          <h2 className="mt-2 text-xl font-semibold">How often?</h2>
-        </div>
-        <div className="mt-6 flex w-full flex-col gap-3">
-          {FREQUENCIES.map((freq) => (
-            <button
-              key={freq}
-              onClick={() => {
-                setFrequency(freq);
-                trackCustom("funnel_frequency_selected", { frequency: freq });
-              }}
-              aria-pressed={frequency === freq}
-              className={`rounded-lg border px-4 py-4 text-sm font-medium ${
-                frequency === freq
-                  ? "border-brand-primary bg-brand-primary/20 text-brand-text"
-                  : "border-brand-border bg-brand-bg-card text-brand-text-secondary"
-              }`}
-            >
-              {freq}
-            </button>
-          ))}
-        </div>
-        <button
-          disabled={!frequency}
-          onClick={() => {
-            trackCustom("funnel_qualify2_completed", { frequency });
-            setStep("email");
-          }}
-          className="mt-8 w-full rounded-lg bg-brand-primary px-8 py-4 text-base font-semibold text-white disabled:opacity-40"
-        >
-          Continue
         </button>
       </Shell>
     );
@@ -263,8 +170,7 @@ export function Funnel() {
       <Shell step={step}>
         <h2 className="w-full text-xl font-semibold">Where should we send your PDFs?</h2>
         <p className="mt-2 w-full text-sm text-brand-text-secondary">
-          {scanType ? `Great for ${scanType.toLowerCase()}, ` : ""}
-          we&apos;ll email you tips to get started.
+          We&apos;ll email you tips to get started.
         </p>
         <label htmlFor="email" className="sr-only">
           Your email
@@ -287,7 +193,7 @@ export function Funnel() {
             fetch("/api/lead", {
               method: "POST",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify({ email, scanType, frequency, src }),
+              body: JSON.stringify({ email, src }),
             }).catch(() => {});
             setStep("paywall");
           }}
