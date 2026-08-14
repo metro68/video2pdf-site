@@ -14,15 +14,14 @@ interface MetricResponse {
   data: Record<string, number> | null;
 }
 
-const PROVIDERS = ["appstore", "play", "posthog", "appsflyer", "meta", "tiktok", "stripe"] as const;
+// Growth-tab sources only: the ad providers (Meta, TikTok, AppsFlyer) moved
+// to the Ads eval tab, and fetching them here wasted AppsFlyer API quota.
+const PROVIDERS = ["appstore", "play", "posthog", "stripe"] as const;
 type Provider = (typeof PROVIDERS)[number];
 const PROVIDER_LABEL: Record<Provider, string> = {
   appstore: "App Store",
   play: "Google Play",
   posthog: "PostHog",
-  appsflyer: "AppsFlyer",
-  meta: "Meta",
-  tiktok: "TikTok",
   stripe: "Stripe",
 };
 
@@ -31,9 +30,6 @@ const CONSOLE = {
   appstore: { name: "App Store Connect", href: "https://appstoreconnect.apple.com/trends" },
   play: { name: "Play Console", href: "https://play.google.com/console" },
   posthog: { name: "PostHog", href: "https://eu.posthog.com" },
-  meta: { name: "Meta Ads", href: "https://business.facebook.com/adsmanager" },
-  tiktok: { name: "TikTok Ads", href: "https://ads.tiktok.com" },
-  appsflyer: { name: "AppsFlyer", href: "https://hq1.appsflyer.com" },
   stripe: { name: "Stripe Dashboard", href: "https://dashboard.stripe.com/subscriptions" },
 } as const;
 
