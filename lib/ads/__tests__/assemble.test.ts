@@ -8,7 +8,7 @@ const NOW = new Date("2026-08-14T12:00:00Z");
 
 function row(overrides: Partial<AdDailyRow> = {}): AdDailyRow {
   return {
-    adId: "1", adName: "Delf 1", date: "2026-08-12", spend: 10, impressions: 500,
+    adId: "1", adName: "Delf 1", campaignName: "U.S ad", date: "2026-08-12", spend: 10, impressions: 500,
     clicks: 12, contentViews: 9, emailStepViews: 6, leads: 4, checkouts: 2, trials: 1,
     ...overrides,
   };

@@ -21,7 +21,7 @@ function econ(overrides: Partial<DerivedEconomics> = {}): DerivedEconomics {
 
 function ad(overrides: Partial<AdRowFacts> = {}): AdRowFacts {
   return {
-    adId: "1", adName: "vid 1", spendGbp: 10, impressions: 1000, clicks: 25,
+    adId: "1", adName: "vid 1", campaignName: "UGC creatives ad", spendGbp: 10, impressions: 1000, clicks: 25,
     ctrPct: 2.5, cpcGbp: 0.4, contentViews: 20, emailStepViews: 12, leads: 8,
     checkouts: 4, pixelTrials: 2, cpaGbp: 5,
     ...overrides,

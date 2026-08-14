@@ -3,6 +3,7 @@ import type { DerivedEconomics } from "@/lib/ads/economics";
 export interface AdRowFacts {
   adId: string;
   adName: string;
+  campaignName: string;
   spendGbp: number;
   impressions: number;
   clicks: number;
@@ -74,7 +75,7 @@ export function runRules(input: RulesInput): Deduction[] {
         severity: "act",
         adId: ad.adId,
         title: `Swap creative "${ad.adName}" for one in the wings`,
-        evidence: `${ad.adName}: £${ad.spendGbp.toFixed(2)} spent, CTR ${ad.ctrPct.toFixed(2)}%, 0 trials.`,
+        evidence: `${ad.adName}${ad.campaignName ? ` (campaign: ${ad.campaignName})` : ""}: £${ad.spendGbp.toFixed(2)} spent, CTR ${ad.ctrPct.toFixed(2)}%, 0 trials.`,
         rationale: "Spend past 1.5x CPA with sub-1% CTR and no trials means the creative, not the audience, is the bottleneck.",
         hypothesis: "A replacement creative reaches at least 1.5% CTR at similar CPC within £15 of spend.",
       });

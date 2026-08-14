@@ -5,6 +5,7 @@ import type { AdsEvalPayload } from "@/lib/ads/assemble";
 import { deriveEconomics, isModeling } from "@/lib/ads/economics";
 import type { AdsAssumptions } from "@/lib/ads/config";
 import KpiTile from "@/app/dashboard/components/KpiTile";
+import DashboardTabs from "@/app/dashboard/components/DashboardTabs";
 import VerdictBanner from "./VerdictBanner";
 import AssumptionsPanel from "./AssumptionsPanel";
 import CohortChart from "./CohortChart";
@@ -62,7 +63,8 @@ export default function AdsEvalClient() {
   if (fetchError) {
     return (
       <main className="min-h-screen bg-brand-bg text-brand-text p-6">
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-6xl space-y-6">
+          <DashboardTabs isAdmin={true} />
           <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4">
             <p className="text-sm text-red-500">
               Could not load ads data. Check your connection and try again.
@@ -83,7 +85,8 @@ export default function AdsEvalClient() {
   if (loading || !payload || !assumptions) {
     return (
       <main className="min-h-screen bg-brand-bg text-brand-text p-6">
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-6xl space-y-6">
+          <DashboardTabs isAdmin={true} />
           <p className="text-sm text-brand-text-secondary">Loading ads eval&hellip;</p>
         </div>
       </main>
@@ -112,15 +115,15 @@ export default function AdsEvalClient() {
     <main className="min-h-screen bg-brand-bg text-brand-text p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <header className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <a href="/dashboard" className="text-xs text-brand-primary hover:underline">
-              &larr; Back to dashboard
-            </a>
-            <h1 className="mt-1 text-xl font-bold text-brand-primary">Ads eval</h1>
-            <p className="text-xs text-brand-text-secondary">
-              Is Meta ad spend paying for itself, based on Stripe&apos;s actual trial and payment
-              records.
-            </p>
+          <div className="flex items-center gap-3">
+            <img src="/assets/icon.png" alt="Video2PDF" className="h-10 w-10 rounded-lg" />
+            <div>
+              <h1 className="text-xl font-bold text-brand-primary">Video2PDF Analytics</h1>
+              <p className="text-xs text-brand-text-secondary">
+                Is Meta ad spend paying for itself, based on Stripe&apos;s actual trial and payment
+                records.
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-1 rounded-lg border border-brand-border bg-brand-bg-card p-1">
             {DAY_OPTIONS.map((d) => (
@@ -128,17 +131,20 @@ export default function AdsEvalClient() {
                 key={d}
                 type="button"
                 onClick={() => setDays(d)}
-                className={`rounded-md px-3 py-1.5 text-sm ${
+                aria-pressed={days === d}
+                className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
                   days === d
                     ? "bg-brand-primary text-white"
-                    : "text-brand-text-secondary hover:text-brand-text"
+                    : "text-brand-text-secondary hover:bg-brand-bg hover:text-brand-text"
                 }`}
               >
-                {d}d
+                Last {d} days
               </button>
             ))}
           </div>
         </header>
+
+        <DashboardTabs isAdmin={true} />
 
         <VerdictBanner
           economics={economics}

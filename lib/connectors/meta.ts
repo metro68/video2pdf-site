@@ -69,6 +69,7 @@ export async function fetchMetrics(month?: string): Promise<ConnectorResult<Metr
 export interface AdDailyRow {
   adId: string;
   adName: string;
+  campaignName: string;
   date: string;
   spend: number;
   impressions: number;
@@ -116,6 +117,7 @@ export function normalizeAdInsights(raw: unknown): AdDailyRow[] {
     const out: AdDailyRow = {
       adId: String(row.ad_id ?? ""),
       adName: String(row.ad_name ?? ""),
+      campaignName: String(row.campaign_name ?? ""),
       date: String(row.date_start ?? ""),
       spend: Number(row.spend ?? 0),
       impressions: Number(row.impressions ?? 0),
@@ -150,7 +152,7 @@ async function fetchAdInsightsRaw(): Promise<unknown> {
   const params = new URLSearchParams({
     level: "ad",
     time_increment: "1",
-    fields: "ad_id,ad_name,spend,impressions,inline_link_clicks,actions",
+    fields: "ad_id,ad_name,campaign_name,spend,impressions,inline_link_clicks,actions",
     time_range: JSON.stringify({ since: day(since), until: day(until) }),
     limit: "500",
     access_token: token,
