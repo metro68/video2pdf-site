@@ -1,8 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import VerdictBanner from "@/app/dashboard/ads/components/VerdictBanner";
 import AssumptionsPanel from "@/app/dashboard/ads/components/AssumptionsPanel";
 import DeductionsPanel from "@/app/dashboard/ads/components/DeductionsPanel";
+import CohortChart from "@/app/dashboard/ads/components/CohortChart";
+import AdsEvalClient from "@/app/dashboard/ads/components/AdsEvalClient";
 import { ADS_ASSUMPTIONS } from "@/lib/ads/config";
 import { deriveEconomics } from "@/lib/ads/economics";
 
@@ -44,6 +46,40 @@ describe("AssumptionsPanel", () => {
       <AssumptionsPanel value={ADS_ASSUMPTIONS} defaults={ADS_ASSUMPTIONS} observedRate={7 / 15} observedN={15} onChange={() => {}} />,
     );
     expect(screen.getByText(/observed cancel rate/i).textContent).toContain("n=15");
+  });
+});
+
+describe("CohortChart", () => {
+  const DAILY = [
+    { date: "2026-08-01", spendGbp: 10, stripeTrials: 2, collectedUsd: 0 },
+    { date: "2026-08-02", spendGbp: 12, stripeTrials: 3, collectedUsd: 50 },
+  ];
+
+  it("shows the MODELING chip when modeling", () => {
+    const econ = deriveEconomics(FACTS, ADS_ASSUMPTIONS);
+    render(<CohortChart daily={DAILY} economics={econ} gbpPerUsd={0.77} modeling={true} />);
+    expect(screen.getByText("MODELING")).toBeTruthy();
+  });
+
+  it("does not show the MODELING chip when not modeling", () => {
+    const econ = deriveEconomics(FACTS, ADS_ASSUMPTIONS);
+    render(<CohortChart daily={DAILY} economics={econ} gbpPerUsd={0.77} modeling={false} />);
+    expect(screen.queryByText("MODELING")).toBeNull();
+  });
+});
+
+describe("AdsEvalClient", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("shows an error state with a Retry button when the fetch fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    render(<AdsEvalClient />);
+    await waitFor(() => {
+      expect(screen.getByText(/could not load ads data/i)).toBeTruthy();
+    });
+    expect(screen.getByRole("button", { name: /retry/i })).toBeTruthy();
   });
 });
 

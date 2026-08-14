@@ -9,10 +9,12 @@ export default function CohortChart({
   daily,
   economics,
   gbpPerUsd,
+  modeling,
 }: {
   daily: AdsEvalPayload["daily"];
   economics: DerivedEconomics;
   gbpPerUsd: number;
+  modeling: boolean;
 }) {
   let cumSpend = 0;
   let cumTrials = 0;
@@ -36,7 +38,14 @@ export default function CohortChart({
 
   return (
     <div className="rounded-xl bg-brand-bg-card border border-brand-border p-4">
-      <div className="mb-3 text-sm font-semibold text-brand-text">Cumulative spend vs expected revenue</div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="text-sm font-semibold text-brand-text">Cumulative spend vs expected revenue</div>
+        {modeling ? (
+          <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-500">
+            MODELING
+          </span>
+        ) : null}
+      </div>
       <ResponsiveContainer width="100%" height={260}>
         <LineChart data={points}>
           <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="3 3" />

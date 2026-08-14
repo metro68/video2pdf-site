@@ -18,9 +18,11 @@ function fmtGbp(n: number): string {
   return `${sign}£${Math.abs(n).toFixed(2)}`;
 }
 
+// Mirrors FreshnessLine's canonical "not connected" phrasing so the same
+// underlying state reads the same way across the dashboard.
 function humanError(raw: string | undefined): string | null {
   if (!raw) return null;
-  if (raw === "awaiting_credentials") return "not configured yet";
+  if (raw === "awaiting_credentials") return "not connected";
   return raw;
 }
 
@@ -28,13 +30,19 @@ export default function AdsEvalClient() {
   const [days, setDays] = useState<(typeof DAY_OPTIONS)[number]>(14);
   const [payload, setPayload] = useState<AdsEvalPayload | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [assumptions, setAssumptions] = useState<AdsAssumptions | null>(null);
+  const [retryTick, setRetryTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setFetchError(false);
     fetch(`/api/ads-eval?days=${days}`)
-      .then((r) => r.json() as Promise<AdsEvalPayload>)
+      .then((r) => {
+        if (!r.ok) throw new Error(`Request failed: ${r.status}`);
+        return r.json() as Promise<AdsEvalPayload>;
+      })
       .then((res) => {
         if (cancelled) return;
         setPayload(res);
@@ -43,12 +51,34 @@ export default function AdsEvalClient() {
       })
       .catch(() => {
         if (cancelled) return;
+        setFetchError(true);
         setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [days]);
+  }, [days, retryTick]);
+
+  if (fetchError) {
+    return (
+      <main className="min-h-screen bg-brand-bg text-brand-text p-6">
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4">
+            <p className="text-sm text-red-500">
+              Could not load ads data. Check your connection and try again.
+            </p>
+            <button
+              type="button"
+              onClick={() => setRetryTick((t) => t + 1)}
+              className="mt-3 rounded-lg border border-brand-border px-3 py-1.5 text-sm text-brand-text hover:bg-brand-bg-card"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   if (loading || !payload || !assumptions) {
     return (
@@ -152,7 +182,12 @@ export default function AdsEvalClient() {
           onChange={setAssumptions}
         />
 
-        <CohortChart daily={payload.daily} economics={economics} gbpPerUsd={assumptions.gbpPerUsd} />
+        <CohortChart
+          daily={payload.daily}
+          economics={economics}
+          gbpPerUsd={assumptions.gbpPerUsd}
+          modeling={modeling}
+        />
 
         {metaErrorMsg ? (
           <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-500">
