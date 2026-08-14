@@ -141,6 +141,11 @@ export default function DashboardClient({ role }: { role: Role }) {
                 className="rounded-lg bg-brand-bg-card border border-brand-border px-3 py-1.5 text-sm text-brand-text"
               />
             </label>
+            {role === "admin" ? (
+              <a href="/dashboard/ads" className="text-sm text-brand-primary hover:underline">
+                Ads eval
+              </a>
+            ) : null}
             <button onClick={onSignOut} className="text-sm text-brand-text-secondary underline">
               Sign out
             </button>

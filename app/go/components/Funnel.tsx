@@ -67,12 +67,27 @@ export function Funnel() {
   const [frequency, setFrequency] = useState<Frequency | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [src, setSrc] = useState("direct");
+  const [utmCampaign, setUtmCampaign] = useState("");
+  const [utmContent, setUtmContent] = useState("");
   const count = FUNNEL_CONFIG.socialProofCount.toLocaleString();
 
   useEffect(() => {
     track("ViewContent");
-    const source = new URLSearchParams(window.location.search).get("src") ?? "direct";
-    setSrc(source);
+    const params = new URLSearchParams(window.location.search);
+    const source = params.get("src") ?? "direct";
+    const campaign = params.get("utm_campaign") ?? "";
+    const content = params.get("utm_content") ?? "";
+    setUtmCampaign(campaign);
+    setUtmContent(content);
+    // Composes the src convention consumed by the lead API: "<src>|c:<campaign>|a:<content>".
+    // Each segment is appended only when its value is present, so a single utm
+    // param never leaves a dangling empty "|c:" or "|a:" segment.
+    const segments = [
+      source,
+      campaign ? `c:${campaign}` : null,
+      content ? `a:${content}` : null,
+    ].filter((segment): segment is string => segment !== null);
+    setSrc(segments.join("|"));
     trackCustom("funnel_opened", { source });
   }, []);
 
@@ -105,6 +120,8 @@ export function Funnel() {
           email,
           fbp: readCookie("_fbp"),
           fbc: readCookie("_fbc"),
+          ...(utmCampaign ? { utmCampaign } : {}),
+          ...(utmContent ? { utmContent } : {}),
         }),
       });
       if (res.ok === false) {
