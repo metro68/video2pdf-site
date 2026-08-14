@@ -194,6 +194,42 @@ describe("Funnel", () => {
     Object.defineProperty(window, "location", { value: originalLocation, writable: true });
   });
 
+  it("omits the dangling a: segment when only utm_campaign is present", async () => {
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      value: { ...originalLocation, search: "?src=meta&utm_campaign=aug-ugc" },
+      writable: true,
+    });
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/lead", expect.anything()));
+    const leadCalls = (fetchMock as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
+    const leadCall = leadCalls.find(([url]) => url === "/api/lead")!;
+    const leadBody = JSON.parse(String(leadCall[1].body));
+    expect(leadBody.src).toBe("meta|c:aug-ugc");
+    Object.defineProperty(window, "location", { value: originalLocation, writable: true });
+  });
+
+  it("omits the dangling c: segment when only utm_content is present", async () => {
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      value: { ...originalLocation, search: "?src=meta&utm_content=120210000001" },
+      writable: true,
+    });
+    render(<Funnel />);
+    goToQualify();
+    answerQualifyTaps();
+    capturEmailAndContinue();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/lead", expect.anything()));
+    const leadCalls = (fetchMock as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
+    const leadCall = leadCalls.find(([url]) => url === "/api/lead")!;
+    const leadBody = JSON.parse(String(leadCall[1].body));
+    expect(leadBody.src).toBe("meta|a:120210000001");
+    Object.defineProperty(window, "location", { value: originalLocation, writable: true });
+  });
+
   it("fires funnel_paywall_viewed when the paywall step is shown", () => {
     render(<Funnel />);
     goToQualify();

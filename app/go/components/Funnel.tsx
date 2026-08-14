@@ -80,9 +80,14 @@ export function Funnel() {
     setUtmCampaign(campaign);
     setUtmContent(content);
     // Composes the src convention consumed by the lead API: "<src>|c:<campaign>|a:<content>".
-    setSrc(
-      campaign || content ? `${source}|c:${campaign}|a:${content}` : source
-    );
+    // Each segment is appended only when its value is present, so a single utm
+    // param never leaves a dangling empty "|c:" or "|a:" segment.
+    const segments = [
+      source,
+      campaign ? `c:${campaign}` : null,
+      content ? `a:${content}` : null,
+    ].filter((segment): segment is string => segment !== null);
+    setSrc(segments.join("|"));
     trackCustom("funnel_opened", { source });
   }, []);
 
