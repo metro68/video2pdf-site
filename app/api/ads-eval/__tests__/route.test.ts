@@ -34,9 +34,15 @@ describe("/api/ads-eval auth", () => {
     expect((await GET(req())).status).toBe(401);
   });
 
-  it("403 for non-admin", async () => {
+  it("200 for marketing: both roles may view ads eval", async () => {
     roleFromRequest.mockResolvedValue("marketing");
-    expect((await GET(req())).status).toBe(403);
+    fetchAdInsights.mockResolvedValue({ status: "ok", asOf: "x", data: [] });
+    fetchTrialCohort.mockResolvedValue({
+      status: "ok", asOf: "x",
+      data: { trials: [], aggregates: { trials: 0, decided: 0, payers: 0, canceled: 0, pastDue: 0, pending: 0, collectedUsd: 0 }, dailyTrials: [] },
+    });
+    fetchAppTrialEvents.mockResolvedValue({ status: "ok", asOf: "x", data: [] });
+    expect((await GET(req())).status).toBe(200);
   });
 });
 

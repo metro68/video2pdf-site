@@ -3,20 +3,21 @@
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/dashboard", label: "Overview", adminOnly: false },
-  { href: "/dashboard/ads", label: "Ads eval", adminOnly: true },
+  { href: "/dashboard", label: "Overview" },
+  { href: "/dashboard/ads", label: "Ads eval" },
 ] as const;
 
 // Segmented view switcher shown on every dashboard page, so Overview and
 // Ads eval read as two views of one dashboard rather than separate pages.
-export default function DashboardTabs({ isAdmin }: { isAdmin: boolean }) {
+// Both views are available to every dashboard role.
+export default function DashboardTabs() {
   const pathname = usePathname();
   return (
     <nav
       aria-label="Dashboard views"
       className="flex w-fit items-center gap-1 rounded-lg border border-brand-border bg-brand-bg-card p-1"
     >
-      {TABS.filter((t) => !t.adminOnly || isAdmin).map((t) => {
+      {TABS.map((t) => {
         const active = pathname === t.href;
         return (
           <a

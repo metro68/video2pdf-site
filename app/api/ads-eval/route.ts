@@ -10,7 +10,7 @@ const ALLOWED_DAYS = [7, 14, 30];
 export async function GET(request: Request): Promise<NextResponse> {
   const role = await roleFromRequest(request);
   if (!role) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // Both roles may view ads eval; marketing needs the same ad economics.
 
   const raw = Number(new URL(request.url).searchParams.get("days") ?? 14);
   const windowDays = ALLOWED_DAYS.includes(raw) ? raw : 30;

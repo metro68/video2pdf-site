@@ -64,7 +64,7 @@ export default function AdsEvalClient() {
     return (
       <main className="min-h-screen bg-brand-bg text-brand-text p-6">
         <div className="mx-auto max-w-6xl space-y-6">
-          <DashboardTabs isAdmin={true} />
+          <DashboardTabs />
           <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4">
             <p className="text-sm text-red-500">
               Could not load ads data. Check your connection and try again.
@@ -86,7 +86,7 @@ export default function AdsEvalClient() {
     return (
       <main className="min-h-screen bg-brand-bg text-brand-text p-6">
         <div className="mx-auto max-w-6xl space-y-6">
-          <DashboardTabs isAdmin={true} />
+          <DashboardTabs />
           <p className="text-sm text-brand-text-secondary">Loading ads eval&hellip;</p>
         </div>
       </main>
@@ -145,7 +145,7 @@ export default function AdsEvalClient() {
           </div>
         </header>
 
-        <DashboardTabs isAdmin={true} />
+        <DashboardTabs />
 
         <VerdictBanner
           economics={economics}
