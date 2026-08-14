@@ -85,12 +85,22 @@ export interface AdDailyRow {
 // same underlying conversion under several action_type buckets at once
 // (bare "view_content"/"initiate_checkout", "omni_*", "onsite_web_*", and
 // "offsite_conversion.fb_pixel_*"). Matching a broad substring like
-// "view_content" or "initiate_checkout" double/triple counts. We match only
-// the "offsite_conversion.fb_pixel_*" bucket, which is the single canonical
-// pixel event Meta recommends for attribution. No "start_trial" or
-// "funnel_email_step_viewed" action types (standard or custom-conversion id)
-// were present in the live sample, so those two remain unverified pending
-// those events actually firing; substrings are kept as placeholders.
+// "view_content" or "initiate_checkout" double/triple counts if summed. We
+// match only the "offsite_conversion.fb_pixel_*" bucket for contentViews/
+// leads/checkouts, the single canonical pixel event Meta recommends for
+// attribution. No "start_trial" or "funnel_email_step_viewed" action types
+// (standard or custom-conversion id) were present in the live sample, so
+// those two remain unverified pending those events actually firing;
+// substrings are kept as placeholders.
+//
+// Accumulation is MAX-across-matching-buckets per row, not sum: if Meta ever
+// reports a matched event under more than one action_type on the same row
+// (as it does for view_content/initiate_checkout above), summing would
+// silently double-count it. For the three exact pixel matchers only one
+// action_type can match per row today, so max is equivalent to sum; for the
+// two still-substring matchers (emailStepViews, trials) max makes us robust
+// to the same duplicate-bucket behavior if/when those events start firing
+// under multiple buckets.
 const ACTION_MATCHERS: Array<{ key: keyof Pick<AdDailyRow, "contentViews" | "emailStepViews" | "leads" | "checkouts" | "trials">; match: string }> = [
   { key: "contentViews", match: "offsite_conversion.fb_pixel_view_content" },
   { key: "emailStepViews", match: "funnel_email_step_viewed" },
@@ -120,7 +130,7 @@ export function normalizeAdInsights(raw: unknown): AdDailyRow[] {
     for (const a of actions ?? []) {
       const type = a.action_type ?? "";
       for (const m of ACTION_MATCHERS) {
-        if (type.includes(m.match)) out[m.key] += Number(a.value ?? 0);
+        if (type.includes(m.match)) out[m.key] = Math.max(out[m.key], Number(a.value ?? 0));
       }
     }
     return out;

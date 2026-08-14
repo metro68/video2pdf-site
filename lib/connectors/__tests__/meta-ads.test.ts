@@ -85,6 +85,31 @@ describe("normalizeAdInsights", () => {
     expect(rows[0].contentViews).toBe(5);
     expect(rows[0].checkouts).toBe(2);
   });
+
+  it("does not double-count trials if Meta later reports start_trial under multiple buckets", () => {
+    // trials/emailStepViews still match by substring (unverified against
+    // live data). If a duplicate-bucket pattern like view_content/
+    // initiate_checkout later applies to start_trial, max-over-matching
+    // buckets must prevent summing them.
+    const raw = {
+      data: [
+        {
+          ad_id: "1",
+          ad_name: "dup-trial-test",
+          date_start: "2026-08-13",
+          spend: "1",
+          impressions: "1",
+          inline_link_clicks: "1",
+          actions: [
+            { action_type: "offsite_conversion.custom.start_trial_website", value: "1" },
+            { action_type: "start_trial", value: "1" },
+          ],
+        },
+      ],
+    };
+    const rows = normalizeAdInsights(raw);
+    expect(rows[0].trials).toBe(1);
+  });
 });
 
 describe("fetchAdInsights", () => {
