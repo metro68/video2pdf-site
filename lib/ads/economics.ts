@@ -14,6 +14,8 @@ export interface CohortAggregates {
 export interface AdsFacts {
   spendGbp: number;
   stripeTrials: number;
+  /** Ad-attributed app-store trial starts (AppsFlyer af_start_trial) in the window. */
+  appTrials: number;
   trialsLast7: number;
   cohort: CohortAggregates;
 }
@@ -24,9 +26,12 @@ export interface DerivedEconomics {
   trialToPaid: number;
   trialToPaidSource: "assumed" | "observed";
   observedTrialToPaid: number | null;
+  appTrialToPaid: number;
+  totalTrials: number;
   breakEvenCpaGbp: number;
   cpaGbp: number | null;
   netRevenuePerPayerUsd: number;
+  netRevenuePerAppPayerUsd: number;
   expectedRevenueUsd: number;
   projectedPnlGbp: number;
   verdict: Verdict;
@@ -53,11 +58,28 @@ export function deriveEconomics(
   const trialToPaid = useObserved ? observedTrialToPaid : 1 - a.assumedTrialCancelRate;
 
   const netRevenuePerPayerUsd = a.annualPriceUsd * (1 - a.stripeFeeRate) * (1 - a.refundRate);
-  const breakEvenCpaGbp = netRevenuePerPayerUsd * trialToPaid * a.gbpPerUsd;
-  const cpaGbp = facts.stripeTrials > 0 ? facts.spendGbp / facts.stripeTrials : null;
+  // App payers pay the same list price; the store takes its fee instead of
+  // Stripe's. App-store conversions are never observable per cohort (they
+  // decide on Apple's/Google's servers), so the app rate is always assumed.
+  const netRevenuePerAppPayerUsd = a.annualPriceUsd * (1 - a.storeFeeRate) * (1 - a.refundRate);
+  const appTrialToPaid = 1 - a.assumedAppTrialCancelRate;
+
+  const totalTrials = facts.stripeTrials + facts.appTrials;
+  const cpaGbp = totalTrials > 0 ? facts.spendGbp / totalTrials : null;
+
+  // Break-even is expected net revenue per trial, blended across where trials
+  // decide: web trials at the web rate/fees, app trials at the app rate/fees.
+  const webValuePerTrialGbp = netRevenuePerPayerUsd * trialToPaid * a.gbpPerUsd;
+  const appValuePerTrialGbp = netRevenuePerAppPayerUsd * appTrialToPaid * a.gbpPerUsd;
+  const breakEvenCpaGbp =
+    totalTrials > 0
+      ? (facts.stripeTrials * webValuePerTrialGbp + facts.appTrials * appValuePerTrialGbp) / totalTrials
+      : webValuePerTrialGbp;
 
   const expectedRevenueUsd =
-    cohort.payers * netRevenuePerPayerUsd + cohort.pending * trialToPaid * netRevenuePerPayerUsd;
+    cohort.payers * netRevenuePerPayerUsd +
+    cohort.pending * trialToPaid * netRevenuePerPayerUsd +
+    facts.appTrials * appTrialToPaid * netRevenuePerAppPayerUsd;
   const projectedPnlGbp = expectedRevenueUsd * a.gbpPerUsd - facts.spendGbp;
 
   let verdict: Verdict = "ambiguous";
@@ -78,9 +100,12 @@ export function deriveEconomics(
     trialToPaid,
     trialToPaidSource: useObserved ? "observed" : "assumed",
     observedTrialToPaid,
+    appTrialToPaid,
+    totalTrials,
     breakEvenCpaGbp,
     cpaGbp,
     netRevenuePerPayerUsd,
+    netRevenuePerAppPayerUsd,
     expectedRevenueUsd,
     projectedPnlGbp,
     verdict,

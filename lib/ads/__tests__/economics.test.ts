@@ -9,6 +9,7 @@ function facts(overrides: Partial<AdsFacts> = {}): AdsFacts {
   return {
     spendGbp: 100,
     stripeTrials: 10,
+    appTrials: 0,
     trialsLast7: 10,
     cohort: { trials: 10, decided: 0, payers: 0, canceled: 0, pastDue: 0, pending: 10, collectedUsd: 0 },
     ...overrides,
@@ -105,6 +106,28 @@ describe("deriveEconomics: overrideCancelRate", () => {
     const withNoOpts = deriveEconomics(facts({ cohort: COHORT_20_DECIDED }), A);
     const withExplicitFalse = deriveEconomics(facts({ cohort: COHORT_20_DECIDED }), A, { overrideCancelRate: false });
     expect(withNoOpts).toEqual(withExplicitFalse);
+  });
+});
+
+describe("deriveEconomics: blended app trials", () => {
+  it("blends app trials into CPA, break-even, and expected revenue", () => {
+    const f = facts({ spendGbp: 150, stripeTrials: 5, appTrials: 5, cohort: { trials: 5, decided: 0, payers: 0, canceled: 0, pastDue: 0, pending: 5, collectedUsd: 0 } });
+    const d = deriveEconomics(f, A);
+    expect(d.totalTrials).toBe(10);
+    expect(d.cpaGbp).toBeCloseTo(15);
+    const webNet = A.annualPriceUsd * (1 - A.stripeFeeRate) * (1 - A.refundRate);
+    const appNet = A.annualPriceUsd * (1 - A.storeFeeRate) * (1 - A.refundRate);
+    const webPer = webNet * d.trialToPaid * A.gbpPerUsd;
+    const appPer = appNet * d.appTrialToPaid * A.gbpPerUsd;
+    expect(d.breakEvenCpaGbp).toBeCloseTo((5 * webPer + 5 * appPer) / 10);
+    expect(d.expectedRevenueUsd).toBeCloseTo(5 * d.trialToPaid * webNet + 5 * d.appTrialToPaid * appNet);
+  });
+
+  it("reduces to the web-only formula when appTrials is zero", () => {
+    const d = deriveEconomics(facts(), A);
+    const webNet = A.annualPriceUsd * (1 - A.stripeFeeRate) * (1 - A.refundRate);
+    expect(d.breakEvenCpaGbp).toBeCloseTo(webNet * d.trialToPaid * A.gbpPerUsd);
+    expect(d.cpaGbp).toBeCloseTo(100 / 10);
   });
 });
 

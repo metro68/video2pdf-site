@@ -11,7 +11,7 @@ import { assemblePayload } from "@/lib/ads/assemble";
 import type { TrialCohort } from "@/lib/connectors/stripe";
 
 const COHORT = { trials: 20, decided: 15, payers: 8, canceled: 7, pastDue: 0, pending: 5, collectedUsd: 239.92 };
-const FACTS = { spendGbp: 200, stripeTrials: 20, trialsLast7: 12, cohort: COHORT };
+const FACTS = { spendGbp: 200, stripeTrials: 20, appTrials: 0, trialsLast7: 12, cohort: COHORT };
 
 describe("VerdictBanner", () => {
   it("shows verdict, evidence numbers, and learning caveat", () => {
@@ -57,8 +57,8 @@ describe("AssumptionsPanel", () => {
 
 describe("CohortChart", () => {
   const DAILY = [
-    { date: "2026-08-01", spendGbp: 10, stripeTrials: 2, collectedUsd: 0 },
-    { date: "2026-08-02", spendGbp: 12, stripeTrials: 3, collectedUsd: 50 },
+    { date: "2026-08-01", spendGbp: 10, stripeTrials: 2, appTrials: 0, collectedUsd: 0 },
+    { date: "2026-08-02", spendGbp: 12, stripeTrials: 3, appTrials: 0, collectedUsd: 50 },
   ];
 
   it("shows the MODELING chip when modeling", () => {

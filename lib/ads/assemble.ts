@@ -1,5 +1,6 @@
 import type { AdDailyRow } from "@/lib/connectors/meta";
 import type { TrialCohort } from "@/lib/connectors/stripe";
+import type { AppTrialDay } from "@/lib/connectors/appsflyer";
 import { ADS_ASSUMPTIONS, type AdsAssumptions } from "@/lib/ads/config";
 import { deriveEconomics, type AdsFacts, type CohortAggregates } from "@/lib/ads/economics";
 import { runRules, type AdRowFacts, type AccountFunnelFacts, type Deduction } from "@/lib/ads/rules";
@@ -13,10 +14,10 @@ export interface AdsEvalPayload {
   ads: AdRowFacts[];
   funnel: AccountFunnelFacts;
   facts: AdsFacts;
-  daily: Array<{ date: string; spendGbp: number; stripeTrials: number; collectedUsd: number }>;
+  daily: Array<{ date: string; spendGbp: number; stripeTrials: number; appTrials: number; collectedUsd: number }>;
   deductions: Deduction[];
   assumptions: AdsAssumptions;
-  errors: { meta?: string; stripe?: string };
+  errors: { meta?: string; stripe?: string; appsflyer?: string };
 }
 
 const EMPTY_AGG: CohortAggregates = {
@@ -30,12 +31,15 @@ function day(d: Date): string {
 export function assemblePayload(args: {
   adRows: AdDailyRow[] | null;
   cohort: TrialCohort | null;
+  /** Ad-attributed app trial starts per day; null when AppsFlyer failed. */
+  appTrialDays?: AppTrialDay[] | null;
   windowDays: number;
   now: Date;
   metaError?: string;
   stripeError?: string;
+  appsflyerError?: string;
 }): AdsEvalPayload {
-  const { adRows, cohort, windowDays, now, metaError, stripeError } = args;
+  const { adRows, cohort, appTrialDays, windowDays, now, metaError, stripeError, appsflyerError } = args;
   const to = day(now);
   const from = day(new Date(now.getTime() - (windowDays - 1) * 864e5));
 
@@ -85,10 +89,18 @@ export function assemblePayload(args: {
   const trialsLast7 = (cohort?.dailyTrials ?? [])
     .filter((d) => d.date >= last7From && d.date <= to)
     .reduce((s, d) => s + d.count, 0);
+  const appTrialsByDate = new Map((appTrialDays ?? []).map((d) => [d.date, d.trials]));
+  const appTrialsInWindow = [...appTrialsByDate.entries()]
+    .filter(([date]) => date >= from && date <= to)
+    .reduce((s, [, n]) => s + n, 0);
+  const appTrialsLast7 = [...appTrialsByDate.entries()]
+    .filter(([date]) => date >= last7From && date <= to)
+    .reduce((s, [, n]) => s + n, 0);
   const facts: AdsFacts = {
     spendGbp: sum(windowRows, "spend"),
     stripeTrials: aggregates.trials,
-    trialsLast7,
+    appTrials: appTrialsInWindow,
+    trialsLast7: trialsLast7 + appTrialsLast7,
     cohort: aggregates,
   };
 
@@ -105,16 +117,17 @@ export function assemblePayload(args: {
     date,
     spendGbp: spendByDate.get(date) ?? 0,
     stripeTrials: trialsByDate.get(date) ?? 0,
+    appTrials: appTrialsByDate.get(date) ?? 0,
     collectedUsd: i === dates.length - 1 ? aggregates.collectedUsd : 0,
   }));
 
   const economics = deriveEconomics(facts, ADS_ASSUMPTIONS);
   const cpaSeries = dates.map((date) => {
     const spend = spendByDate.get(date) ?? 0;
-    const trials = trialsByDate.get(date) ?? 0;
+    const trials = (trialsByDate.get(date) ?? 0) + (appTrialsByDate.get(date) ?? 0);
     return { date, cpaGbp: trials > 0 ? spend / trials : null };
   });
-  const deductions = runRules({ ads, funnel, economics, cpaSeries });
+  const deductions = runRules({ ads, funnel, economics, cpaSeries, stripeTrials: aggregates.trials });
 
   const status: AdsEvalPayload["status"] =
     adRows && cohort ? "ok" : !adRows && !cohort ? "error" : "partial";
@@ -134,6 +147,7 @@ export function assemblePayload(args: {
     errors: {
       ...(metaError ? { meta: metaError } : {}),
       ...(stripeError ? { stripe: stripeError } : {}),
+      ...(appsflyerError ? { appsflyer: appsflyerError } : {}),
     },
   };
 }

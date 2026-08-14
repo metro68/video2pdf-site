@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { roleFromRequest } from "@/lib/session-role";
 import { fetchAdInsights } from "@/lib/connectors/meta";
 import { fetchTrialCohort } from "@/lib/connectors/stripe";
+import { fetchAppTrialEvents } from "@/lib/connectors/appsflyer";
 import { assemblePayload } from "@/lib/ads/assemble";
 
 const ALLOWED_DAYS = [7, 14, 30];
@@ -18,15 +19,21 @@ export async function GET(request: Request): Promise<NextResponse> {
   const to = now.toISOString().slice(0, 10);
   const from = new Date(now.getTime() - (windowDays - 1) * 864e5).toISOString().slice(0, 10);
 
-  const [meta, cohort] = await Promise.all([fetchAdInsights(), fetchTrialCohort(from, to)]);
+  const [meta, cohort, appTrials] = await Promise.all([
+    fetchAdInsights(),
+    fetchTrialCohort(from, to),
+    fetchAppTrialEvents(),
+  ]);
 
   const payload = assemblePayload({
     adRows: meta.data,
     cohort: cohort.data,
+    appTrialDays: appTrials.data,
     windowDays,
     now,
     metaError: meta.status === "ok" ? undefined : (meta.error ?? meta.status),
     stripeError: cohort.status === "ok" ? undefined : (cohort.error ?? cohort.status),
+    appsflyerError: appTrials.status === "ok" ? undefined : (appTrials.error ?? appTrials.status),
   });
 
   return NextResponse.json(payload);

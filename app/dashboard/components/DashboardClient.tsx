@@ -7,7 +7,6 @@ import KpiTile from "./KpiTile";
 import DashboardTabs from "./DashboardTabs";
 import AwaitingCard from "./AwaitingCard";
 import FreshnessLine from "./FreshnessLine";
-import AdSection from "./AdSection";
 
 interface MetricResponse {
   status: "ok" | "awaiting_credentials" | "error";
@@ -109,10 +108,6 @@ export default function DashboardClient({ role }: { role: Role }) {
   const mrr =
     (num("appstore", "mrr") ?? 0) + (num("play", "mrr") ?? 0) + (num("stripe", "mrr") ?? 0);
   const webFreeTrials = num("stripe", "webFreeTrials");
-  const adSpend =
-    (num("meta", "adSpend") ?? 0) +
-    (num("tiktok", "adSpend") ?? 0) +
-    (num("appsflyer", "adSpend") ?? 0);
 
   return (
     <main className="min-h-screen bg-brand-bg text-brand-text p-6">
@@ -179,12 +174,6 @@ export default function DashboardClient({ role }: { role: Role }) {
             sources={[CONSOLE.posthog]}
           />
           <KpiTile
-            label={`Ad spend (${monthLabel})`}
-            value={`$${adSpend.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-            description={`Total ad spend in ${monthLabel} across Meta, TikTok, and AppsFlyer-tracked partners. $0 means no spend or no active campaigns.`}
-            sources={[CONSOLE.meta, CONSOLE.tiktok, CONSOLE.appsflyer]}
-          />
-          <KpiTile
             label="Web free trials"
             value={webFreeTrials != null ? webFreeTrials.toLocaleString() : "n/a"}
             description={`Free trials started on the web funnel via Stripe in ${monthLabel}. Each trial is a Stripe subscription that entered its trial period this month.`}
@@ -206,20 +195,6 @@ export default function DashboardClient({ role }: { role: Role }) {
               sources={[CONSOLE.appstore, CONSOLE.play, CONSOLE.stripe]}
             />
           ) : null}
-        </section>
-
-        <section>
-          <div className="mb-2 text-sm font-semibold text-brand-text">Ad performance by channel</div>
-          <p className="mb-3 text-xs text-brand-text-secondary">
-            Spend in {monthLabel} per channel, from each ad platform&apos;s reporting API. A
-            channel with no active campaigns shows $0.
-          </p>
-          <AdSection
-            data={[
-              { channel: "Meta", spend: num("meta", "adSpend") ?? 0, roas: num("meta", "roas") ?? 0 },
-              { channel: "TikTok", spend: num("tiktok", "adSpend") ?? 0, roas: num("tiktok", "roas") ?? 0 },
-            ]}
-          />
         </section>
 
         {PROVIDERS.some((p) => metrics[p]?.status === "awaiting_credentials") ? (

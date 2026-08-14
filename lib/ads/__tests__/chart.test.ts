@@ -6,14 +6,15 @@ import { buildCohortChartSeries } from "@/lib/ads/chart";
 import type { AdsEvalPayload } from "@/lib/ads/assemble";
 
 const DAILY: AdsEvalPayload["daily"] = [
-  { date: "2026-08-10", spendGbp: 20, stripeTrials: 3, collectedUsd: 0 },
-  { date: "2026-08-11", spendGbp: 15, stripeTrials: 2, collectedUsd: 0 },
-  { date: "2026-08-12", spendGbp: 25, stripeTrials: 5, collectedUsd: 89.97 },
+  { date: "2026-08-10", spendGbp: 20, stripeTrials: 3, appTrials: 0, collectedUsd: 0 },
+  { date: "2026-08-11", spendGbp: 15, stripeTrials: 2, appTrials: 0, collectedUsd: 0 },
+  { date: "2026-08-12", spendGbp: 25, stripeTrials: 5, appTrials: 0, collectedUsd: 89.97 },
 ];
 
 const FACTS: AdsFacts = {
   spendGbp: 60,
   stripeTrials: 10,
+  appTrials: 0,
   trialsLast7: 10,
   cohort: { trials: 10, decided: 8, payers: 4, canceled: 4, pastDue: 0, pending: 2, collectedUsd: 89.97 },
 };
@@ -38,11 +39,12 @@ describe("buildCohortChartSeries", () => {
 
   it("guards division by zero when there are no trials at all", () => {
     const emptyDaily: AdsEvalPayload["daily"] = [
-      { date: "2026-08-10", spendGbp: 0, stripeTrials: 0, collectedUsd: 0 },
+      { date: "2026-08-10", spendGbp: 0, stripeTrials: 0, appTrials: 0, collectedUsd: 0 },
     ];
     const emptyFacts: AdsFacts = {
       spendGbp: 0,
       stripeTrials: 0,
+      appTrials: 0,
       trialsLast7: 0,
       cohort: { trials: 0, decided: 0, payers: 0, canceled: 0, pastDue: 0, pending: 0, collectedUsd: 0 },
     };
@@ -54,7 +56,7 @@ describe("buildCohortChartSeries", () => {
 
   it("suppresses the collected-revenue point when collectedUsd is 0", () => {
     const zeroCollectedDaily: AdsEvalPayload["daily"] = [
-      { date: "2026-08-10", spendGbp: 10, stripeTrials: 1, collectedUsd: 0 },
+      { date: "2026-08-10", spendGbp: 10, stripeTrials: 1, appTrials: 0, collectedUsd: 0 },
     ];
     const economics = deriveEconomics(FACTS, ADS_ASSUMPTIONS);
     const points = buildCohortChartSeries(zeroCollectedDaily, economics, ADS_ASSUMPTIONS.gbpPerUsd);

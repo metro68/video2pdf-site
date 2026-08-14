@@ -66,7 +66,7 @@ export default function AssumptionsPanel({
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <label className="flex flex-col gap-1 text-xs text-brand-text-secondary">
           Price (USD, annual)
           <input
@@ -79,10 +79,10 @@ export default function AssumptionsPanel({
           />
         </label>
         <label className="flex flex-col gap-1 text-xs text-brand-text-secondary">
-          Cancel rate (%)
+          Web cancel rate (%)
           <input
             type="number"
-            aria-label="Cancel rate (%)"
+            aria-label="Web cancel rate (%)"
             disabled={!editing}
             value={Math.round(value.assumedTrialCancelRate * 100)}
             onChange={(e) => set("assumedTrialCancelRate", num(e.target.value) / 100)}
@@ -93,6 +93,29 @@ export default function AssumptionsPanel({
               observed cancel rate: {pct(observedCancelRate)} (n={observedN})
             </span>
           ) : null}
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-brand-text-secondary">
+          App cancel rate (%)
+          <input
+            type="number"
+            aria-label="App cancel rate (%)"
+            disabled={!editing}
+            value={Math.round(value.assumedAppTrialCancelRate * 100)}
+            onChange={(e) => set("assumedAppTrialCancelRate", num(e.target.value) / 100)}
+            className="rounded-lg border border-brand-border bg-brand-bg px-2 py-1.5 text-sm text-brand-text disabled:opacity-60"
+          />
+          <span className="text-brand-text-secondary">always assumed; app conversions are not observable</span>
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-brand-text-secondary">
+          Store fee (%)
+          <input
+            type="number"
+            aria-label="Store fee (%)"
+            disabled={!editing}
+            value={Math.round(value.storeFeeRate * 100)}
+            onChange={(e) => set("storeFeeRate", num(e.target.value) / 100)}
+            className="rounded-lg border border-brand-border bg-brand-bg px-2 py-1.5 text-sm text-brand-text disabled:opacity-60"
+          />
         </label>
         <label className="flex flex-col gap-1 text-xs text-brand-text-secondary">
           Refund rate (%)

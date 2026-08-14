@@ -32,6 +32,10 @@ export interface RulesInput {
   funnel: AccountFunnelFacts;
   economics: DerivedEconomics;
   cpaSeries: Array<{ date: string; cpaGbp: number | null }>;
+  /** Stripe trials in the window: the truth for web checkout completion. The
+   * pixel's start_trial count is unreliable (unverified action matcher), so
+   * checkout-completion rules must never use pixel trials as the numerator. */
+  stripeTrials: number;
 }
 
 export type Severity = "info" | "act" | "urgent";
@@ -64,7 +68,7 @@ function pct(n: number): string {
 
 export function runRules(input: RulesInput): Deduction[] {
   const out: Deduction[] = [];
-  const { ads, funnel, economics, cpaSeries } = input;
+  const { ads, funnel, economics, cpaSeries, stripeTrials } = input;
 
   // change-creative, per ad
   const cpaFloor = Math.max(economics.cpaGbp ?? economics.breakEvenCpaGbp, CREATIVE_MIN_SPEND_GBP / CREATIVE_SPEND_X_CPA);
@@ -97,16 +101,20 @@ export function runRules(input: RulesInput): Deduction[] {
     });
   }
 
-  // app-trial-instead-of-web, account level
-  const completion = funnel.checkouts > 0 ? funnel.pixelTrials / funnel.checkouts : null;
+  // app-trial-instead-of-web, account level. Numerator is Stripe trials, the
+  // source of truth for completed web checkouts; pixel checkout starts remain
+  // the denominator since Stripe never sees an abandoned checkout. Mixing
+  // sources slightly overstates completion when a checkout start is not
+  // pixel-attributed, which is the safe direction for this rule.
+  const completion = funnel.checkouts > 0 ? stripeTrials / funnel.checkouts : null;
   if (completion != null && funnel.checkouts >= MIN_CHECKOUTS_FOR_SIGNAL && completion < CHECKOUT_COMPLETION_FLOOR) {
     out.push({
       id: "app-trial-instead-of-web",
       severity: "act",
-      title: "Test routing to the app store free trial instead of web checkout",
-      evidence: `${funnel.pixelTrials} trials from ${funnel.checkouts} checkout starts (${pct(completion)} completion).`,
+      title: "Expand routing to the app store free trial instead of web checkout",
+      evidence: `${stripeTrials} Stripe trials from ${funnel.checkouts} pixel checkout starts (${pct(completion)} completion).`,
       rationale: "Leads reach checkout but stall at payment entry; a store trial removes card entry friction at the cost of the store fee.",
-      hypothesis: "Store-trial routing converts over half of checkout starters, net of the 15-30% store fee.",
+      hypothesis: "Store-trial routing converts over half of checkout starters, net of the store fee.",
     });
   }
 

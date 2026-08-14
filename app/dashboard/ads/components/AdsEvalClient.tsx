@@ -104,6 +104,7 @@ export default function AdsEvalClient() {
   const observedN = payload.facts.cohort.decided;
   const metaErrorMsg = humanError(payload.errors.meta);
   const stripeErrorMsg = humanError(payload.errors.stripe);
+  const appsflyerErrorMsg = humanError(payload.errors.appsflyer);
   const trialToPaidBadge =
     economics.trialToPaidSource === "observed"
       ? `observed (n=${observedN})`
@@ -161,14 +162,19 @@ export default function AdsEvalClient() {
             description={`Total Meta spend across all ads in this ${payload.windowDays}-day window (${payload.from} to ${payload.to}). From Meta's reporting API; can lag a few hours.`}
           />
           <KpiTile
-            label="Trial starts"
+            label="Web trial starts"
             value={payload.facts.cohort.trials.toLocaleString()}
             description="Stripe subscriptions with a trial_start in this window. Stripe is live; this includes every trial regardless of whether it has been decided yet."
           />
           <KpiTile
+            label="App trial starts"
+            value={payload.facts.appTrials.toLocaleString()}
+            description="Ad-attributed app-store trials (AppsFlyer af_start_trial, non-organic sources only) in this window. Refreshes every few hours; iOS can lag or undercount while SKAdNetwork postbacks arrive."
+          />
+          <KpiTile
             label="CPA"
             value={economics.cpaGbp != null ? `£${economics.cpaGbp.toFixed(2)}` : "n/a"}
-            description="Spend divided by Stripe trials started in this window. n/a when no trials started yet."
+            description="Spend divided by all trials started in this window, web (Stripe) plus app (AppsFlyer). n/a when no trials started yet."
           />
           <KpiTile
             label="Decided trials"
@@ -194,13 +200,13 @@ export default function AdsEvalClient() {
           <KpiTile
             label="Break-even CPA"
             value={`£${economics.breakEvenCpaGbp.toFixed(2)}`}
-            description="The most a trial can cost in ad spend and still be profitable, given the current price, trial-to-paid rate, Stripe fee, and refund rate assumptions."
+            description="The most a trial can cost in ad spend and still be profitable. Blended across web and app trials: web trials at the web trial-to-paid rate and Stripe fee, app trials at the assumed app rate and store fee."
             freshness={modeling ? "MODELING" : undefined}
           />
           <KpiTile
             label="Projected P&amp;L"
             value={fmtGbp(economics.projectedPnlGbp)}
-            description="Expected revenue from this cohort (paid trials plus pending trials weighted by trial-to-paid) converted to GBP, minus spend in this window. A projection, not booked cash."
+            description="Expected revenue from this cohort (web payers plus pending web trials at the web rate, plus app trials at the assumed app rate net of the store fee) converted to GBP, minus spend in this window. A projection, not booked cash."
             freshness={modeling ? "MODELING" : undefined}
           />
         </section>
@@ -235,13 +241,21 @@ export default function AdsEvalClient() {
           </div>
         ) : null}
 
+        {appsflyerErrorMsg ? (
+          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-500">
+            AppsFlyer reporting unavailable: {appsflyerErrorMsg}. App trial starts read 0, so
+            economics above count web trials only.
+          </div>
+        ) : null}
+
         <DeductionsPanel deductions={payload.deductions} modeling={modeling} />
 
         <div className="rounded-xl border border-brand-border bg-brand-bg-card p-4 text-xs text-brand-text-secondary">
           <div>
             as of {payload.asOf ? new Date(payload.asOf).toLocaleString() : "unknown"} &middot; Meta{" "}
             {metaErrorMsg ? `error: ${metaErrorMsg}` : "up to date"} &middot; Stripe{" "}
-            {stripeErrorMsg ? `error: ${stripeErrorMsg}` : "up to date"}
+            {stripeErrorMsg ? `error: ${stripeErrorMsg}` : "up to date"} &middot; AppsFlyer{" "}
+            {appsflyerErrorMsg ? `error: ${appsflyerErrorMsg}` : "up to date"}
           </div>
         </div>
       </div>

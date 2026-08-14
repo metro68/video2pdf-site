@@ -67,6 +67,79 @@ async function fetchRaw(from: string, to: string): Promise<unknown> {
 const CURRENT_TTL_MS = 6 * 60 * 60 * 1000;
 const PAST_MONTH_TTL_MS = 24 * 60 * 60 * 1000;
 
+export interface AppTrialDay {
+  date: string;
+  trials: number;
+}
+
+// Parses the partners_by_date aggregate CSV into per-day ad-attributed app
+// trial starts: af_start_trial unique users summed across non-organic media
+// sources. Organic rows are excluded because these counts feed ad economics;
+// a trial no ad caused must not lower the measured cost per trial.
+export function parseTrialEventsCsv(csv: string): AppTrialDay[] {
+  const lines = csv.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const header = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, "").toLowerCase());
+  const dateIdx = header.findIndex((h) => h === "date");
+  const sourceIdx = header.findIndex((h) => h.startsWith("media source"));
+  const trialIdx = header.findIndex((h) => h.includes("af_start_trial") && h.includes("unique"));
+  if (dateIdx < 0 || trialIdx < 0) return [];
+
+  const byDate = new Map<string, number>();
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+    if (sourceIdx >= 0 && cols[sourceIdx]?.toLowerCase() === "organic") continue;
+    const date = cols[dateIdx];
+    const trials = Number(cols[trialIdx]) || 0;
+    if (!date || trials <= 0) continue;
+    byDate.set(date, (byDate.get(date) ?? 0) + trials);
+  }
+  return [...byDate.entries()]
+    .map(([date, trials]) => ({ date, trials }))
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+
+const TRIALS_CACHE_KEY = "connector:appsflyer:app-trials";
+const APP_TRIALS_DAYS = 30;
+
+/** Trailing-30-day ad-attributed app trial starts per day, both platforms. */
+export async function fetchAppTrialEvents(): Promise<ConnectorResult<AppTrialDay[]>> {
+  if (!hasCredentials()) return { data: null, asOf: null, status: "awaiting_credentials" };
+  const cached = getCached<AppTrialDay[]>(TRIALS_CACHE_KEY);
+  if (cached) return { data: cached.value, asOf: cached.asOf, status: "ok" };
+  try {
+    const token = process.env.APPSFLYER_API_TOKEN!;
+    const day = (d: Date) => d.toISOString().slice(0, 10);
+    const to = new Date();
+    const from = new Date(to.getTime() - APP_TRIALS_DAYS * 864e5);
+    const perApp = await Promise.all(
+      appIds().map(async (appId) => {
+        const params = new URLSearchParams({ from: day(from), to: day(to) });
+        const res = await fetch(
+          `https://hq1.appsflyer.com/api/agg-data/export/app/${appId}/partners_by_date_report/v5?${params.toString()}`,
+          { headers: { Authorization: `Bearer ${token}`, Accept: "text/csv" } },
+        );
+        if (!res.ok) {
+          throw new Error(`appsflyer trial events fetch failed for ${appId}: ${res.status} ${await res.text()}`);
+        }
+        return parseTrialEventsCsv(await res.text());
+      }),
+    );
+    const byDate = new Map<string, number>();
+    for (const rows of perApp) {
+      for (const r of rows) byDate.set(r.date, (byDate.get(r.date) ?? 0) + r.trials);
+    }
+    const data = [...byDate.entries()]
+      .map(([date, trials]) => ({ date, trials }))
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
+    // Same quota concern as fetchMetrics: long TTL keeps agg-data calls rare.
+    const asOf = setCached(TRIALS_CACHE_KEY, data, CURRENT_TTL_MS);
+    return { data, asOf, status: "ok" };
+  } catch (e) {
+    return { data: null, asOf: null, status: "error", error: (e as Error).message };
+  }
+}
+
 export async function fetchMetrics(month?: string): Promise<ConnectorResult<Metrics>> {
   if (!hasCredentials()) {
     return { data: null, asOf: null, status: "awaiting_credentials" };

@@ -33,7 +33,7 @@ export function buildCohortChartSeries(
 
   let cumTrials = 0;
   const unscaled = daily.map((d) => {
-    cumTrials += d.stripeTrials;
+    cumTrials += d.stripeTrials + d.appTrials;
     return cumTrials * economics.trialToPaid * economics.netRevenuePerPayerUsd * gbpPerUsd;
   });
   const unscaledFinal = unscaled[unscaled.length - 1] ?? 0;
