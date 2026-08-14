@@ -14,7 +14,7 @@ const RAW = {
     {
       ad_id: "120210000001",
       ad_name: "UgcM- vid 2",
-      campaign_name: "UGC creatives ad",
+      adset_name: "UGC creatives ad",
       date_start: "2026-08-12",
       date_stop: "2026-08-12",
       spend: "7.50",
@@ -38,7 +38,7 @@ describe("normalizeAdInsights", () => {
     expect(rows).toHaveLength(1);
     const r = rows[0];
     expect(r.adId).toBe("120210000001");
-    expect(r.campaignName).toBe("UGC creatives ad");
+    expect(r.adsetName).toBe("UGC creatives ad");
     expect(r.date).toBe("2026-08-12");
     expect(r.spend).toBeCloseTo(7.5);
     expect(r.clicks).toBe(8);

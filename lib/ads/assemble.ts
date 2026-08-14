@@ -45,12 +45,12 @@ export function assemblePayload(args: {
   const byAd = new Map<string, AdRowFacts>();
   for (const r of windowRows) {
     const acc = byAd.get(r.adId) ?? {
-      adId: r.adId, adName: r.adName, campaignName: r.campaignName, spendGbp: 0, impressions: 0, clicks: 0,
+      adId: r.adId, adName: r.adName, adsetName: r.adsetName, spendGbp: 0, impressions: 0, clicks: 0,
       ctrPct: 0, cpcGbp: null, contentViews: 0, emailStepViews: 0, leads: 0,
       checkouts: 0, pixelTrials: 0, cpaGbp: null,
     };
     acc.adName = r.adName || acc.adName;
-    acc.campaignName = r.campaignName || acc.campaignName;
+    acc.adsetName = r.adsetName || acc.adsetName;
     acc.spendGbp += r.spend;
     acc.impressions += r.impressions;
     acc.clicks += r.clicks;

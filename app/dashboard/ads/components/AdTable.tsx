@@ -33,7 +33,7 @@ export default function AdTable({
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead>
               <tr className="border-b border-brand-border text-xs text-brand-text-secondary">
-                <th className="py-2 pr-3 font-medium">Ad / campaign</th>
+                <th className="py-2 pr-3 font-medium">Ad / ad set</th>
                 <th className="py-2 pr-3 font-medium">Spend</th>
                 <th className="py-2 pr-3 font-medium">CTR</th>
                 <th className="py-2 pr-3 font-medium">CPC</th>
@@ -53,8 +53,8 @@ export default function AdTable({
                   <tr key={ad.adId} className="border-b border-brand-border/50 text-brand-text">
                     <td className="py-2 pr-3">
                       <div>{ad.adName || ad.adId}</div>
-                      {ad.campaignName ? (
-                        <div className="text-xs text-brand-text-secondary">{ad.campaignName}</div>
+                      {ad.adsetName ? (
+                        <div className="text-xs text-brand-text-secondary">{ad.adsetName}</div>
                       ) : null}
                     </td>
                     <td className="py-2 pr-3">£{ad.spendGbp.toFixed(2)}</td>
