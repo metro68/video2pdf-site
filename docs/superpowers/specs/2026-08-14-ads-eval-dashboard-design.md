@@ -42,6 +42,17 @@ Derived values (computed, never hardcoded elsewhere):
 
 Switch rule: while decided trials in the window `< minDecidedForActuals`, all economics use `assumedTrialCancelRate` and every figure derived from it carries an "assumed" badge. At or above the threshold, the observed cancel rate from Stripe replaces the assumption and badges flip to "observed (n=X)".
 
+### Scenario modeling (editable assumptions)
+
+An "Assumptions" panel renders the config values as a row of input boxes: price (USD), cancel rate, refund rate, Stripe fee rate, GBP/USD rate. Behavior:
+
+- Read-only by default. An "Edit assumptions" button unlocks all fields at once; "Done" locks them again, "Reset" restores defaults.
+- Edits are client-side state only: nothing persists, a reload restores defaults. No API round-trip; see Data plumbing (derivation moves client-side to make this instant).
+- While any value differs from its default (or from the observed rate when actuals are active), the page enters modeling mode: an amber "MODELING" chip appears on the assumptions panel and on every derived figure (verdict banner, economic KPI tiles, cohort chart, economics deduction), so a modeled outcome can never be mistaken for reality.
+- The observed cancel rate, when available, is shown next to the input as "observed: X% (n=Y)"; editing the input models an override of it.
+- Raw facts never change with edits: spend, trials, CTR, funnel counts, payers, and collected revenue are immune; only derived economics (break-even, trial-to-paid when assumed/overridden, expected revenue, projected P&L, verdict) re-derive.
+- Context note on the panel: "Change these to model outcomes, e.g. what happens to break-even if cancellations run at 60%, or if we price at 39.99. Edits are not saved and do not affect any real data."
+
 Sensitivity (shown in the verdict panel's context note so the target is legible):
 
 | Cancel rate | Trial-to-paid | Break-even CPA (GBP) |
@@ -107,7 +118,8 @@ Thresholds live next to the rules as named constants with comments; they are heu
 
 - `lib/connectors/meta.ts`: add `fetchAdInsights(from, to)`: `level=ad`, `time_increment=1`, fields spend/impressions/clicks/ctr/cpc/actions, filtered to the pixel events (ViewContent, Lead custom events, InitiateCheckout, start_trial_website). Same cache layer, 1h TTL for current window.
 - `lib/connectors/stripe.ts`: add `fetchTrialCohort(from, to)`: subscriptions with `trial_start` in window -> per-trial record { started, decided, outcome: paid | canceled | past_due | pending }, plus aggregates. Decided = trial_start + trialDays in the past.
-- New route `app/api/ads-eval/route.ts`: session + admin check, joins Meta + Stripe + assumptions, runs rules engine, returns one JSON payload. Client stays dumb.
+- New route `app/api/ads-eval/route.ts`: session + admin check, joins Meta + Stripe, runs the rules engine, returns one JSON payload of raw facts (per-ad metrics, funnel counts, trial cohort aggregates, deductions) plus the default assumptions. It does NOT bake derived economics into the payload.
+- Derivation layer `lib/ads/economics.ts`: pure functions `(facts, assumptions) => derived` (break-even, trial-to-paid, expected revenue, projected P&L, verdict). The page calls it client-side with the current assumptions state, so scenario edits re-derive instantly with no refetch. The verdict inside the deductions payload is computed server-side with default assumptions; in modeling mode the client recomputes it and labels it MODELING.
 - Funnel change: `/go` reads `utm_campaign`, `utm_content` (ad id) from the landing URL, stores on the lead (`src` field convention) and passes through checkout metadata alongside fbp/fbc. Blended attribution stays the analysis basis for now; this is future-proofing only.
 
 ## Currency
@@ -121,6 +133,7 @@ Vitest, following existing patterns in `__tests__` folders:
 - Rules engine: table-driven cases per rule (trigger fires / doesn't / suppression interaction).
 - Trial cohort classifier: decided/pending boundaries, each outcome mapping, window edges.
 - Break-even derivation: assumed vs observed switch at exactly `minDecidedForActuals`.
+- Economics derivation: same facts re-derived under edited assumptions (price, cancel rate, FX) produce correct break-even/P&L/verdict; modeling flag set only when values differ from defaults/observed.
 - Route: auth (401 anon, 403 non-admin), happy-path shape, connector-error partial response.
 
 ## Out of scope
