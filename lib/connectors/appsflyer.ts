@@ -72,6 +72,48 @@ export interface AppTrialDay {
   trials: number;
 }
 
+export interface SourceDailyRow {
+  date: string;
+  source: string;
+  campaign: string;
+  installs: number;
+  trials: number;
+}
+
+// Full per-day source attribution rows from the partners_by_date aggregate
+// CSV, all sources including Organic. Column presence varies: the per-event
+// columns only appear when that event occurred in the requested range.
+export function parseSourceBreakdownCsv(csv: string): SourceDailyRow[] {
+  const lines = csv.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const header = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, "").toLowerCase());
+  const dateIdx = header.findIndex((h) => h === "date");
+  const sourceIdx = header.findIndex((h) => h.startsWith("media source"));
+  const campaignIdx = header.findIndex((h) => h.startsWith("campaign"));
+  const installsIdx = header.findIndex((h) => h === "installs");
+  const trialIdx = header.findIndex((h) => h.includes("af_start_trial") && h.includes("unique"));
+  if (dateIdx < 0 || sourceIdx < 0 || installsIdx < 0) return [];
+
+  const out: SourceDailyRow[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+    const date = cols[dateIdx];
+    if (!date) continue;
+    const installs = Number(cols[installsIdx]) || 0;
+    const trials = trialIdx >= 0 ? Number(cols[trialIdx]) || 0 : 0;
+    if (installs <= 0 && trials <= 0) continue;
+    const rawSource = cols[sourceIdx] ?? "";
+    out.push({
+      date,
+      source: rawSource === "" || rawSource === "None" ? "Organic" : rawSource,
+      campaign: cols[campaignIdx] === "None" ? "" : (cols[campaignIdx] ?? ""),
+      installs,
+      trials,
+    });
+  }
+  return out;
+}
+
 // Parses the partners_by_date aggregate CSV into per-day ad-attributed app
 // trial starts: af_start_trial unique users summed across non-organic media
 // sources. Organic rows are excluded because these counts feed ad economics;
@@ -97,6 +139,54 @@ export function parseTrialEventsCsv(csv: string): AppTrialDay[] {
   return [...byDate.entries()]
     .map(([date, trials]) => ({ date, trials }))
     .sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+
+const SOURCES_CACHE_PREFIX = "connector:appsflyer:sources";
+
+/**
+ * Per-source install and trial attribution for one calendar month, both
+ * platforms merged. Same quota-aware layering as fetchAppTrialEvents:
+ * memory, then durable-if-fresh, then the API with stale-durable fallback.
+ */
+export async function fetchInstallSources(month?: string): Promise<ConnectorResult<SourceDailyRow[]>> {
+  if (!hasCredentials()) return { data: null, asOf: null, status: "awaiting_credentials" };
+  const window = resolveMonthWindow(month);
+  const cacheKey = `${SOURCES_CACHE_PREFIX}:${window.ym}`;
+  const freshMs = window.isCurrent ? CURRENT_TTL_MS : PAST_MONTH_TTL_MS;
+  const cached = getCached<SourceDailyRow[]>(cacheKey);
+  if (cached) return { data: cached.value, asOf: cached.asOf, status: "ok" };
+  const { getDurableCache, setDurableCache } = await import("@/lib/db/metricCache");
+  const durable = await getDurableCache<SourceDailyRow[]>(cacheKey);
+  if (durable && Date.now() - new Date(durable.asOf).getTime() < freshMs) {
+    setCached(cacheKey, durable.value, freshMs);
+    return { data: durable.value, asOf: durable.asOf, status: "ok" };
+  }
+  try {
+    const token = process.env.APPSFLYER_API_TOKEN!;
+    const perApp = await Promise.all(
+      appIds().map(async (appId) => {
+        const params = new URLSearchParams({ from: window.from, to: window.to });
+        const res = await fetch(
+          `https://hq1.appsflyer.com/api/agg-data/export/app/${appId}/partners_by_date_report/v5?${params.toString()}`,
+          { headers: { Authorization: `Bearer ${token}`, Accept: "text/csv" } },
+        );
+        if (!res.ok) {
+          throw new Error(`appsflyer sources fetch failed for ${appId}: ${res.status} ${await res.text()}`);
+        }
+        return parseSourceBreakdownCsv(await res.text());
+      }),
+    );
+    const data = perApp.flat();
+    const asOf = setCached(cacheKey, data, freshMs);
+    await setDurableCache(cacheKey, data);
+    return { data, asOf, status: "ok" };
+  } catch (e) {
+    if (durable) {
+      setCached(cacheKey, durable.value, freshMs);
+      return { data: durable.value, asOf: durable.asOf, status: "ok" };
+    }
+    return { data: null, asOf: null, status: "error", error: (e as Error).message };
+  }
 }
 
 const TRIALS_CACHE_KEY = "connector:appsflyer:app-trials";

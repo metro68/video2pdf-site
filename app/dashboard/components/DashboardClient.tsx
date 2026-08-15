@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import type { Role } from "@/lib/types";
 import KpiTile from "./KpiTile";
 import DashboardTabs from "./DashboardTabs";
+import StackedDailyChart from "./StackedDailyChart";
+import { CHART_COLORS } from "@/lib/chart-theme";
+import { sourceColorSlot } from "@/lib/downloadSources";
 import AwaitingCard from "./AwaitingCard";
 import FreshnessLine from "./FreshnessLine";
 
@@ -12,6 +15,25 @@ interface MetricResponse {
   status: "ok" | "awaiting_credentials" | "error";
   asOf: string | null;
   data: Record<string, number> | null;
+}
+
+interface SourceSummary {
+  source: string;
+  label: string;
+  installs: number;
+  trials: number;
+  campaigns: Array<{ campaign: string; installs: number }>;
+}
+
+interface SourcesResponse {
+  status: "ok" | "awaiting_credentials" | "error";
+  asOf: string | null;
+  data: {
+    sources: SourceSummary[];
+    installsDaily: { labels: string[]; points: Array<{ date: string; values: Record<string, number> }> };
+    trialsDaily: Array<{ date: string; web: number; app: number }>;
+    webTrialsOk: boolean;
+  } | null;
 }
 
 // Growth-tab sources only: the ad providers (Meta, TikTok, AppsFlyer) moved
@@ -41,6 +63,22 @@ export default function DashboardClient({ role }: { role: Role }) {
     () => Object.fromEntries(PROVIDERS.map((p) => [p, null])) as Record<Provider, MetricResponse | null>,
   );
   const [totalDownloads, setTotalDownloads] = useState<MetricResponse | null>(null);
+  const [sources, setSources] = useState<SourcesResponse | null>(null);
+
+  // Install attribution follows the month picker like the provider metrics.
+  useEffect(() => {
+    let cancelled = false;
+    setSources(null);
+    fetch(`/api/metrics/downloads-sources?month=${month}`)
+      .then((r) => r.json() as Promise<SourcesResponse>)
+      .catch(() => ({ status: "error", asOf: null, data: null }) as SourcesResponse)
+      .then((res) => {
+        if (!cancelled) setSources(res);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [month]);
 
   // All-time figure: independent of the month picker, so fetched once.
   useEffect(() => {
@@ -191,6 +229,87 @@ export default function DashboardClient({ role }: { role: Role }) {
               sources={[CONSOLE.appstore, CONSOLE.play, CONSOLE.stripe]}
             />
           ) : null}
+        </section>
+
+        {sources?.status === "ok" && sources.data ? (
+          <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <StackedDailyChart
+              title={`Downloads per day (${monthLabel})`}
+              note="App installs by attributed source, from AppsFlyer. Organic means no ad or link claimed the install. Attribution undercounts versus the stores (tracking consent, SDK-only)."
+              series={sources.data.installsDaily.labels.map((label) => ({
+                key: label,
+                color: CHART_COLORS.categorical[sourceColorSlot(label)],
+              }))}
+              data={sources.data.installsDaily.points.map((p) => ({
+                label: p.date.slice(8),
+                ...Object.fromEntries(sources.data!.installsDaily.labels.map((l) => [l, p.values[l] ?? 0])),
+              }))}
+            />
+            <StackedDailyChart
+              title={`Trial starts per day (${monthLabel})`}
+              note={`Web trials from Stripe (exact, test accounts excluded); app trials from AppsFlyer's ad-attributed af_start_trial events, which lag hours and miss organic app trials.${sources.data.webTrialsOk ? "" : " Stripe was unavailable for this load, so web bars may read 0."}`}
+              series={[
+                { key: "Web", color: CHART_COLORS.categorical[0] },
+                { key: "App", color: CHART_COLORS.categorical[1] },
+              ]}
+              data={sources.data.trialsDaily.map((d) => ({
+                label: d.date.slice(8),
+                Web: d.web,
+                App: d.app,
+              }))}
+            />
+          </section>
+        ) : null}
+
+        <section>
+          <div className="mb-2 text-sm font-semibold text-brand-text">Where downloads come from</div>
+          <p className="mb-3 text-xs text-brand-text-secondary">
+            App installs in {monthLabel} by attributed source, from AppsFlyer. Organic means no ad
+            or link claimed the install. Totals can differ from the store download tiles above:
+            attribution only sees devices that opened the app with tracking consent, while the
+            stores count every download. Refreshes every few hours.
+          </p>
+          <div className="rounded-xl bg-brand-bg-card border border-brand-border p-4">
+            {sources == null ? (
+              <p className="text-sm text-brand-text-secondary">Loading&hellip;</p>
+            ) : sources.status !== "ok" || !sources.data ? (
+              <p className="text-sm text-brand-text-secondary">
+                {sources.status === "awaiting_credentials"
+                  ? "AppsFlyer is not connected."
+                  : "Attribution data is unavailable right now; it usually recovers within a day (API quota)."}
+              </p>
+            ) : sources.data.sources.length === 0 ? (
+              <p className="text-sm text-brand-text-secondary">No attributed installs in {monthLabel}.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[420px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-brand-border text-xs text-brand-text-secondary">
+                      <th className="py-2 pr-3 font-medium">Source</th>
+                      <th className="py-2 pr-3 font-medium">Installs</th>
+                      <th className="py-2 pr-3 font-medium">App trial starts</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sources.data.sources.map((s) => (
+                      <tr key={s.source} className="border-b border-brand-border/50 text-brand-text">
+                        <td className="py-2 pr-3">
+                          <div>{s.label}</div>
+                          {s.campaigns.length > 0 ? (
+                            <div className="text-xs text-brand-text-secondary">
+                              {s.campaigns.map((c) => `${c.campaign} (${c.installs})`).join(", ")}
+                            </div>
+                          ) : null}
+                        </td>
+                        <td className="py-2 pr-3">{s.installs.toLocaleString()}</td>
+                        <td className="py-2 pr-3">{s.trials.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </section>
 
         {PROVIDERS.some((p) => metrics[p]?.status === "awaiting_credentials") ? (
