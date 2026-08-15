@@ -54,7 +54,7 @@ function Counter({ target }: { target: number }) {
 
 export function SocialProof() {
   return (
-    <section className="relative bg-bg-alt py-24">
+    <section className="relative py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <Reveal className="flex flex-col items-center text-center">
           <div className="mb-3 flex items-center gap-1">

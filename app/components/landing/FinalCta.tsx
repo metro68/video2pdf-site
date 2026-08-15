@@ -6,7 +6,7 @@ import { Reveal } from "./Reveal";
 
 export function FinalCta() {
   return (
-    <section className="relative overflow-hidden bg-bg-alt py-24">
+    <section className="relative overflow-hidden py-24">
       <div className="pointer-events-none absolute left-1/2 top-0 h-72 w-[40rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
       <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
         <Reveal>
