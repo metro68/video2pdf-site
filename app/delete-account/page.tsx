@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 export default function DeleteAccountPage() {
   return (
     <>
@@ -57,9 +59,9 @@ export default function DeleteAccountPage() {
       `}</style>
 
       <div className="container legal">
-        <a className="back" href="/">
+        <Link className="back" href="/">
           ← Back to Video2PDF
-        </a>
+        </Link>
         <h1>Delete Your Data</h1>
         <p className="updated">Last updated: July 17, 2026</p>
 

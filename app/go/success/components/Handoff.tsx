@@ -50,7 +50,7 @@ export function Handoff({
     (utmContent ? `&a=${encodeURIComponent(utmContent)}` : "");
 
   return (
-    <main className="min-h-[100dvh] overflow-y-auto bg-brand-bg text-brand-text flex flex-col items-center px-6 pt-10 pb-24">
+    <main className="min-h-dvh overflow-y-auto bg-brand-bg text-brand-text flex flex-col items-center px-6 pt-10 pb-24">
       <div className="w-full max-w-md flex flex-col items-center text-center">
         <img
           src="/assets/bindy.png"
