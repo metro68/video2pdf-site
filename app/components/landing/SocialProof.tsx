@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { useInView, useReducedMotion } from "framer-motion";
 import { Star } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Reveal } from "./Reveal";
 
 const testimonials = [
@@ -59,16 +59,24 @@ export function SocialProof() {
         <Reveal className="flex flex-col items-center text-center">
           <div className="mb-3 flex items-center gap-1">
             {Array.from({ length: 5 }).map((_, i) => (
-              <Star key={i} className="size-5 fill-primary-light text-primary-light" aria-hidden="true" />
+              <Star
+                key={i}
+                className="size-5 fill-primary-light text-primary-light"
+                aria-hidden="true"
+              />
             ))}
           </div>
-          <p className="text-lg font-semibold">Rated 5 stars on the Apple App Store</p>
+          <p className="text-lg font-semibold">
+            Rated 5 stars on the App Store
+          </p>
           <p className="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">
             <span className="bg-gradient-to-r from-primary-light to-primary bg-clip-text text-transparent">
               <Counter target={1000000} />
             </span>
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">pages scanned and counting</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            pages scanned and counting
+          </p>
         </Reveal>
 
         <div className="mt-14 grid gap-5 md:grid-cols-3">
@@ -77,14 +85,20 @@ export function SocialProof() {
               <figure className="h-full rounded-2xl border border-border bg-card p-6">
                 <div className="mb-3 flex gap-0.5">
                   {Array.from({ length: 5 }).map((_, k) => (
-                    <Star key={k} className="size-4 fill-primary-light text-primary-light" aria-hidden="true" />
+                    <Star
+                      key={k}
+                      className="size-4 fill-primary-light text-primary-light"
+                      aria-hidden="true"
+                    />
                   ))}
                 </div>
                 <blockquote className="text-pretty text-sm leading-relaxed text-foreground">
                   &ldquo;{t.quote}&rdquo;
                 </blockquote>
                 <figcaption className="mt-4 text-sm">
-                  <span className="font-semibold text-foreground">{t.name}</span>
+                  <span className="font-semibold text-foreground">
+                    {t.name}
+                  </span>
                   <span className="text-muted-foreground">, {t.role}</span>
                 </figcaption>
               </figure>
