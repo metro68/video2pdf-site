@@ -21,7 +21,7 @@ export function ProductDemo() {
   const pages = [0, 1, 2];
 
   return (
-    <div className="relative mx-auto flex h-[420px] w-full max-w-lg items-center justify-center sm:h-[460px]">
+    <div className="relative mx-auto flex h-[340px] w-full max-w-lg items-center justify-center sm:h-[460px]">
       {/* soft glow */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 size-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-3xl" />
 
