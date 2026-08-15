@@ -43,12 +43,14 @@ export function Pricing() {
             )}
 
             <div className="relative rounded-3xl border border-border bg-card p-8">
-              <div className="mb-6 flex items-center justify-between">
+              {/* The badge gets its own line on phones so the pill never wraps
+                  or crowds the plan name; on sm+ it sits in the top corner. */}
+              <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h3 className="text-xl font-bold">Video2PDF Pro</h3>
                   <p className="text-sm text-muted-foreground">Everything, unlimited</p>
                 </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-primary-light">
+                <span className="inline-flex w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-primary-light">
                   <Lock className="size-3" aria-hidden="true" />
                   Price locked for life
                 </span>
