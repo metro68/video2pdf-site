@@ -15,7 +15,10 @@ export interface SourceSummary {
 // web funnel's store handoff link and hand-built test links both use.
 const SOURCE_LABELS: Array<{ match: (lower: string) => boolean; label: string }> = [
   { match: (s) => s === "organic", label: "Organic" },
-  { match: (s) => s === "my_media_source", label: "Web funnel / OneLink" },
+  // web_funnel is the pid our /open handoff stamps; my_media_source is the
+  // OneLink default that older handoff clicks and hand-built links carry.
+  // Same meaning, one label.
+  { match: (s) => s === "web_funnel" || s === "my_media_source", label: "Web funnel / OneLink" },
   { match: (s) => s.includes("restricted") || s.includes("facebook") || s.includes("meta"), label: "Meta ads" },
   { match: (s) => s.includes("tiktok"), label: "TikTok ads" },
 ];

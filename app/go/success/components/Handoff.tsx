@@ -10,9 +10,19 @@ export interface HandoffProps {
   value: number;
   eventId: string;
   isTrial?: boolean;
+  /** Originating ad identifiers, forwarded to /open for install attribution. */
+  utmCampaign?: string;
+  utmContent?: string;
 }
 
-export function Handoff({ token, value, eventId, isTrial = false }: HandoffProps) {
+export function Handoff({
+  token,
+  value,
+  eventId,
+  isTrial = false,
+  utmCampaign = "",
+  utmContent = "",
+}: HandoffProps) {
   const fired = useRef(false);
 
   useEffect(() => {
@@ -34,7 +44,10 @@ export function Handoff({ token, value, eventId, isTrial = false }: HandoffProps
   // does not suppress it as same-domain): installed app opens directly with the
   // token; without the app, the /open page forwards to the OneLink store link
   // with the redeem params for deferred deep linking. Token never shown.
-  const href = `${FUNNEL_CONFIG.appLinkBase}/open?token=${encodeURIComponent(token)}`;
+  const href =
+    `${FUNNEL_CONFIG.appLinkBase}/open?token=${encodeURIComponent(token)}` +
+    (utmCampaign ? `&c=${encodeURIComponent(utmCampaign)}` : "") +
+    (utmContent ? `&a=${encodeURIComponent(utmContent)}` : "");
 
   return (
     <main className="min-h-[100dvh] overflow-y-auto bg-brand-bg text-brand-text flex flex-col items-center px-6 pt-10 pb-24">

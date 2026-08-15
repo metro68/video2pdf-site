@@ -15,6 +15,8 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
   let value = 0;
   let eventId = "";
   let isTrial = false;
+  let utmCampaign = "";
+  let utmContent = "";
 
   if (sessionId) {
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
@@ -38,6 +40,12 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
     const plan = subPriceId ? PRICE_TO_PLAN[subPriceId] : undefined;
     value = plan ? FUNNEL_CONFIG.plans[plan].cents / 100 : (session.amount_total ?? 0) / 100;
     isTrial = plan ? FUNNEL_CONFIG.plans[plan].trialDays > 0 : false;
+
+    // Originating ad identifiers, captured by the funnel and stored on the
+    // checkout session; forwarded through the store handoff so AppsFlyer can
+    // credit the install to the ad that started the chain, not just the link.
+    utmCampaign = session.metadata?.utm_campaign ?? "";
+    utmContent = session.metadata?.utm_content ?? "";
 
     const metadataToken =
       (session.metadata?.redeem_token as string | undefined) ??
@@ -83,5 +91,14 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
     }
   }
 
-  return <Handoff token={token} value={value} eventId={eventId} isTrial={isTrial} />;
+  return (
+    <Handoff
+      token={token}
+      value={value}
+      eventId={eventId}
+      isTrial={isTrial}
+      utmCampaign={utmCampaign}
+      utmContent={utmContent}
+    />
+  );
 }

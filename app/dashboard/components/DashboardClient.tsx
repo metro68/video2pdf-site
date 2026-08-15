@@ -270,7 +270,10 @@ export default function DashboardClient({ role }: { role: Role }) {
           <div className="mb-2 text-sm font-semibold text-brand-text">Where downloads come from</div>
           <p className="mb-3 text-xs text-brand-text-secondary">
             App installs in {monthLabel} by attributed source, from AppsFlyer. Organic means no ad
-            or link claimed the install. Totals can differ from the store download tiles above:
+            or link claimed the install; Web funnel / OneLink means the install came through the
+            post-checkout store handoff (the originating ad campaign shows under the source once
+            known). The trials column counts app-side trial starts only; web trials are in the
+            chart above and on the Ads eval tab. Totals can differ from the store download tiles:
             attribution only sees devices that opened the app with tracking consent, while the
             stores count every download. Refreshes every few hours.
           </p>

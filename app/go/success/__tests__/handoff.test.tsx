@@ -16,6 +16,17 @@ describe("Handoff", () => {
     expect(screen.queryByText("tok_abc")).not.toBeInTheDocument();
   });
 
+  it("forwards utm campaign and ad identifiers to /open for install attribution", () => {
+    render(
+      <Handoff token="tok_abc" value={4.99} eventId="evt_9" utmCampaign="aug-ugc" utmContent="120210000001" />,
+    );
+    const link = screen.getByRole("link", { name: /open the app/i });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://app.video2pdf.ai/open?token=tok_abc&c=aug-ugc&a=120210000001",
+    );
+  });
+
   it("explains the email fallback for other devices", () => {
     render(<Handoff token="tok_abc" value={4.99} eventId="evt_9" />);
     expect(
