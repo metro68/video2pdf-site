@@ -26,7 +26,7 @@ export function OpenRedirect() {
   }, []);
 
   return (
-    <main className="min-h-[100dvh] bg-brand-bg text-brand-text flex flex-col items-center justify-center px-6 text-center">
+    <main className="min-h-dvh bg-brand-bg text-brand-text flex flex-col items-center justify-center px-6 text-center">
       <p className="text-brand-text-secondary">Opening Video2PDF...</p>
     </main>
   );

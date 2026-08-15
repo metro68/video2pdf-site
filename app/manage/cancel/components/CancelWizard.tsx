@@ -160,7 +160,7 @@ export function CancelWizard() {
   );
 
   const shell = (children: React.ReactNode) => (
-    <main className="min-h-[100dvh] overflow-y-auto bg-brand-bg text-brand-text flex flex-col items-center px-6 pt-10 pb-16">
+    <main className="min-h-dvh overflow-y-auto bg-brand-bg text-brand-text flex flex-col items-center px-6 pt-10 pb-16">
       <div className="w-full max-w-md flex flex-col items-center text-center">
         {children}
         {error && (

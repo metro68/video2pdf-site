@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 export default function TermsPage() {
   return (
     <>
@@ -57,14 +59,14 @@ export default function TermsPage() {
       `}</style>
 
       <div className="container legal">
-        <a className="back" href="/">
+        <Link className="back" href="/">
           <img
             src="/assets/icon.png"
             alt=""
             style={{ width: 24, height: 24, borderRadius: 6, verticalAlign: "middle", marginRight: 8 }}
           />
           ← Back to Video2PDF
-        </a>
+        </Link>
         <h1>Terms of Service</h1>
         <p className="updated">Last updated: April 10, 2026</p>
 
