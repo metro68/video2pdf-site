@@ -15,8 +15,8 @@ export default function HomePage() {
       <Nav />
       <Hero />
       <HowItWorks />
-      <Features />
       <BindySection />
+      <Features />
       <SocialProof />
       <Pricing />
       <FinalCta />

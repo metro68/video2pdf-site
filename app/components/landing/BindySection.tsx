@@ -14,7 +14,7 @@ export function BindySection() {
   const reduce = useReducedMotion();
 
   return (
-    <section className="relative py-24">
+    <section className="relative bg-bg-alt py-24">
       <div className="mx-auto grid max-w-5xl items-center gap-10 px-4 sm:px-6 md:grid-cols-2">
         <Reveal className="order-2 md:order-1">
           <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-primary-light">Meet Bindy</p>
