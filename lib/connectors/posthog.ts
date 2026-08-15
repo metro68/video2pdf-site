@@ -56,6 +56,63 @@ async function fetchRaw(from: string, to: string): Promise<unknown> {
 
 const PAST_MONTH_TTL_MS = 24 * 60 * 60 * 1000;
 
+export interface TrialEventDay {
+  date: string;
+  count: number;
+}
+
+export function normalizeTrialEvents(raw: unknown): TrialEventDay[] {
+  const r = raw as { results?: Array<{ data?: number[]; days?: string[] }> } | null;
+  const series = r?.results?.[0];
+  const days = series?.days ?? [];
+  const data = series?.data ?? [];
+  return days.map((date, i) => ({ date, count: Number(data[i] ?? 0) })).filter((d) => d.date);
+}
+
+const TRIALS_TTL_MS = 30 * 60 * 1000;
+
+/**
+ * App trial starts per day from the app's first-party trial_started event.
+ * PostHog is the fastest trial source we have (seconds behind reality) and
+ * the only one that sees organic app trials; AppsFlyer stays the source for
+ * WHO gets attribution credit. `to` may be today: partial-day counts are the
+ * point here.
+ */
+export async function fetchTrialEventsDaily(from: string, to: string): Promise<ConnectorResult<TrialEventDay[]>> {
+  if (!hasCredentials()) {
+    return { data: null, asOf: null, status: "awaiting_credentials" };
+  }
+  const cacheKey = `${CACHE_KEY}:trials:${from}:${to}`;
+  const cached = getCached<TrialEventDay[]>(cacheKey);
+  if (cached) return { data: cached.value, asOf: cached.asOf, status: "ok" };
+  try {
+    const host = process.env.POSTHOG_HOST!.replace(/\/$/, "");
+    const projectId = process.env.POSTHOG_PROJECT_ID!;
+    const apiKey = process.env.POSTHOG_API_KEY!;
+    const body = {
+      query: {
+        kind: "TrendsQuery",
+        series: [{ kind: "EventsNode", event: "trial_started", math: "total" }],
+        dateRange: { date_from: from, date_to: to },
+        interval: "day",
+      },
+    };
+    const res = await fetch(`${host}/api/projects/${projectId}/query/`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      throw new Error(`posthog trial events fetch failed: ${res.status} ${await res.text()}`);
+    }
+    const data = normalizeTrialEvents(await res.json());
+    const asOf = setCached(cacheKey, data, TRIALS_TTL_MS);
+    return { data, asOf, status: "ok" };
+  } catch (e) {
+    return { data: null, asOf: null, status: "error", error: (e as Error).message };
+  }
+}
+
 export async function fetchMetrics(month?: string): Promise<ConnectorResult<Metrics>> {
   if (!hasCredentials()) {
     return { data: null, asOf: null, status: "awaiting_credentials" };

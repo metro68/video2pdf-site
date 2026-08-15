@@ -33,6 +33,7 @@ interface SourcesResponse {
     installsDaily: { labels: string[]; points: Array<{ date: string; values: Record<string, number> }> };
     trialsDaily: Array<{ date: string; web: number; app: number }>;
     webTrialsOk: boolean;
+    appTrialsSource: "posthog" | "appsflyer";
   } | null;
 }
 
@@ -247,7 +248,11 @@ export default function DashboardClient({ role }: { role: Role }) {
             />
             <StackedDailyChart
               title={`Trial starts per day (${monthLabel})`}
-              note={`Web trials from Stripe (exact, test accounts excluded); app trials from AppsFlyer's ad-attributed af_start_trial events, which lag hours and miss organic app trials.${sources.data.webTrialsOk ? "" : " Stripe was unavailable for this load, so web bars may read 0."}`}
+              note={`Includes today. Web trials from Stripe (live, exact, test accounts excluded). App trials ${
+                sources.data.appTrialsSource === "posthog"
+                  ? "from PostHog's first-party trial_started event (near realtime, includes organic app trials)."
+                  : "from AppsFlyer's ad-attributed af_start_trial events (PostHog was unavailable for this load): lags hours and misses organic app trials."
+              }${sources.data.webTrialsOk ? "" : " Stripe was unavailable for this load, so web bars may read 0."}`}
               series={[
                 { key: "Web", color: CHART_COLORS.categorical[0] },
                 { key: "App", color: CHART_COLORS.categorical[1] },
