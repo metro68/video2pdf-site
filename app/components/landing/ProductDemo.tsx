@@ -14,14 +14,15 @@ function PageLine({ w, highlight }: { w: string; highlight?: boolean }) {
 
 // Animated hero centerpiece: a phone films an open book, captured pages fly
 // out and straighten, and they land in a finished searchable PDF. Built
-// entirely in CSS/Framer Motion so it ships no video assets.
-export function ProductDemo() {
+// entirely in CSS/Framer Motion so it ships no video assets. The funnel
+// reuses it at a shorter height, so the container height is a prop.
+export function ProductDemo({ heightClassName = "h-[340px] sm:h-[460px]" }: { heightClassName?: string }) {
   const reduce = useReducedMotion();
 
   const pages = [0, 1, 2];
 
   return (
-    <div className="relative mx-auto flex h-[340px] w-full max-w-lg items-center justify-center sm:h-[460px]">
+    <div className={`relative mx-auto flex w-full max-w-lg items-center justify-center ${heightClassName}`}>
       {/* soft glow */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 size-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-3xl" />
 

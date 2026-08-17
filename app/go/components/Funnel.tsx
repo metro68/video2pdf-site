@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { FUNNEL_CONFIG, finePrint } from "@/lib/funnel/config";
 import { track, trackCustom, identify } from "@/lib/pixel/events";
+import { ProductDemo } from "@/app/components/landing/ProductDemo";
 import "../funnel.css";
 
 // The qualify quiz steps were cut on 2026-08-15: funnel data showed 85% of
@@ -181,6 +182,9 @@ export function Funnel() {
         <p className="mt-3 text-center text-brand-text-secondary">
           Join {count}+ people scanning smarter.
         </p>
+        <div className="mt-4 w-full">
+          <ProductDemo heightClassName="h-[280px]" />
+        </div>
         <button
           onClick={() => {
             trackCustom("funnel_get_started");
