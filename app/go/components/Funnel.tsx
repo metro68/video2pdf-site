@@ -185,15 +185,19 @@ export function Funnel() {
         <div className="mt-4 w-full">
           <ProductDemo heightClassName="h-[280px]" />
         </div>
-        <button
-          onClick={() => {
-            trackCustom("funnel_get_started");
-            setStep("email");
-          }}
-          className="mt-8 w-full rounded-lg bg-brand-primary px-8 py-4 text-base font-semibold text-white"
-        >
-          Get started
-        </button>
+        {/* Sticky with a fade so the CTA stays on screen even when a short
+            viewport pushes the natural button position below the fold. */}
+        <div className="sticky bottom-0 -mb-24 w-full bg-gradient-to-t from-brand-bg via-brand-bg/90 to-transparent pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <button
+            onClick={() => {
+              trackCustom("funnel_get_started");
+              setStep("email");
+            }}
+            className="w-full rounded-lg bg-brand-primary px-8 py-4 text-base font-semibold text-white"
+          >
+            Start Free Trial
+          </button>
+        </div>
       </Shell>
     );
   }

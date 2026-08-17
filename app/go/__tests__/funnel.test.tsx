@@ -27,7 +27,7 @@ beforeEach(() => {
 });
 
 function goToEmail() {
-  fireEvent.click(screen.getByRole("button", { name: /get started/i }));
+  fireEvent.click(screen.getByRole("button", { name: /start free trial/i }));
 }
 
 function capturEmailAndContinue() {
