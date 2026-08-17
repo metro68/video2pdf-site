@@ -3,7 +3,7 @@ import { stripe, PRICE_TO_PLAN } from "@/lib/stripe/client";
 import { mapEventToMutation } from "@/lib/stripe/webhook";
 import { upsertSubscription, mintRedeemToken } from "@/lib/db/subscriptions";
 import { generateRedeemCode } from "@/lib/db/redeemCode";
-import { sendCapiPurchase, sendCapiStartTrial } from "@/lib/pixel/capi";
+import { reportPurchase, reportStartTrial } from "@/lib/pixel/server-events";
 import { applyDeferredWinback } from "@/lib/manage/stripeOps";
 import { FUNNEL_CONFIG } from "@/lib/funnel/config";
 
@@ -73,12 +73,17 @@ export async function POST(request: Request): Promise<NextResponse> {
           trialEnd: secToMs(subscription?.trial_end),
         });
 
-        // _fbp/_fbc were stashed in session metadata by /api/checkout. They are
-        // persisted onto the subscription's metadata too so the invoice.paid
-        // Purchase (trial conversion / renewals, days or months later) can still
-        // match the originating click and browser.
-        const fbp = typeof o?.metadata?.fbp === "string" ? o.metadata.fbp : undefined;
-        const fbc = typeof o?.metadata?.fbc === "string" ? o.metadata.fbc : undefined;
+        // Meta's _fbp/_fbc and TikTok's _ttp/ttclid were stashed in session
+        // metadata by /api/checkout. They are persisted onto the subscription's
+        // metadata too so the invoice.paid Purchase (trial conversion /
+        // renewals, days or months later) can still match the originating click
+        // and browser.
+        const meta = (key: string): string | undefined =>
+          typeof o?.metadata?.[key] === "string" ? o.metadata[key] : undefined;
+        const fbp = meta("fbp");
+        const fbc = meta("fbc");
+        const ttp = meta("ttp");
+        const ttclid = meta("ttclid");
 
         const token = generateRedeemCode();
         await mintRedeemToken(email, redeemTtlMs, token);
@@ -89,6 +94,8 @@ export async function POST(request: Request): Promise<NextResponse> {
               email,
               ...(fbp ? { fbp } : {}),
               ...(fbc ? { fbc } : {}),
+              ...(ttp ? { ttp } : {}),
+              ...(ttclid ? { ttclid } : {}),
             },
           });
         }
@@ -109,10 +116,11 @@ export async function POST(request: Request): Promise<NextResponse> {
         // plan is charged right here, so it sends Purchase now. Both reuse the
         // session id as eventID to dedup against the success page's browser event.
         const isTrialPlan = plan ? FUNNEL_CONFIG.plans[plan].trialDays > 0 : false;
+        const conversion = { email, value, currency, eventId: sessionId, fbp, fbc, ttp, ttclid };
         if (isTrialPlan) {
-          await sendCapiStartTrial({ email, value, currency, eventId: sessionId, fbp, fbc });
+          await reportStartTrial(conversion);
         } else {
-          await sendCapiPurchase({ email, value, currency, eventId: sessionId, fbp, fbc });
+          await reportPurchase(conversion);
         }
       }
     }
@@ -148,19 +156,19 @@ export async function POST(request: Request): Promise<NextResponse> {
       const email =
         typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
       if (email) {
-        await sendCapiPurchase({
+        const subMeta = (key: string): string | undefined =>
+          typeof subscription?.metadata?.[key] === "string"
+            ? subscription.metadata[key]
+            : undefined;
+        await reportPurchase({
           email,
           value: amountPaid / 100,
           currency: String(o?.currency ?? "usd").toUpperCase(),
           eventId: String(o?.id ?? ""),
-          fbp:
-            typeof subscription?.metadata?.fbp === "string"
-              ? subscription.metadata.fbp
-              : undefined,
-          fbc:
-            typeof subscription?.metadata?.fbc === "string"
-              ? subscription.metadata.fbc
-              : undefined,
+          fbp: subMeta("fbp"),
+          fbc: subMeta("fbc"),
+          ttp: subMeta("ttp"),
+          ttclid: subMeta("ttclid"),
         });
       }
     }

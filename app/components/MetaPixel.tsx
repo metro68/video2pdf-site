@@ -3,14 +3,16 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Script from "next/script";
-import { track } from "@/lib/pixel/events";
+import { trackMetaPageView } from "@/lib/pixel/events";
 
 export function MetaPixel() {
   const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
   const pathname = usePathname();
 
+  // Meta only: TikTok route-change PageViews are owned by TikTokPixel, so
+  // firing the shared track("PageView") here would double-count them.
   useEffect(() => {
-    if (pixelId) track("PageView");
+    if (pixelId) trackMetaPageView();
   }, [pathname, pixelId]);
 
   if (!pixelId) return null;

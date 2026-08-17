@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { MetaPixel } from "@/app/components/MetaPixel";
+import { TikTokPixel } from "@/app/components/TikTokPixel";
 
 export const metadata: Metadata = {
   title: "Video2PDF: Film Any Book, Get a Searchable PDF",
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="font-sans">
         <MetaPixel />
+        <TikTokPixel />
         {children}
       </body>
     </html>

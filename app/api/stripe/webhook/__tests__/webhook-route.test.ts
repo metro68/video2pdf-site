@@ -7,6 +7,8 @@ const {
   mintRedeemToken,
   sendCapiPurchase,
   sendCapiStartTrial,
+  sendTikTokPurchase,
+  sendTikTokStartTrial,
   subscriptionsRetrieve,
   subscriptionsUpdate,
 } = vi.hoisted(() => ({
@@ -17,6 +19,12 @@ const {
     async (_input: { email: string; value: number; currency: string; eventId: string }) => {},
   ),
   sendCapiStartTrial: vi.fn(
+    async (_input: { email: string; value: number; currency: string; eventId: string }) => {},
+  ),
+  sendTikTokPurchase: vi.fn(
+    async (_input: { email: string; value: number; currency: string; eventId: string }) => {},
+  ),
+  sendTikTokStartTrial: vi.fn(
     async (_input: { email: string; value: number; currency: string; eventId: string }) => {},
   ),
   subscriptionsRetrieve: vi.fn(async (_id: string) => ({
@@ -39,6 +47,7 @@ vi.mock("@/lib/stripe/client", () => ({
 }));
 vi.mock("@/lib/db/subscriptions", () => ({ upsertSubscription, mintRedeemToken }));
 vi.mock("@/lib/pixel/capi", () => ({ sendCapiPurchase, sendCapiStartTrial }));
+vi.mock("@/lib/pixel/tiktok-capi", () => ({ sendTikTokPurchase, sendTikTokStartTrial }));
 const applyDeferredWinback = vi.hoisted(() => vi.fn(async (_id: string) => {}));
 vi.mock("@/lib/manage/stripeOps", () => ({
   applyDeferredWinback: (id: string) => applyDeferredWinback(id),
@@ -53,6 +62,8 @@ beforeEach(() => {
   mintRedeemToken.mockClear();
   sendCapiPurchase.mockClear();
   sendCapiStartTrial.mockClear();
+  sendTikTokPurchase.mockClear();
+  sendTikTokStartTrial.mockClear();
   subscriptionsRetrieve.mockReset();
   subscriptionsRetrieve.mockResolvedValue({
     metadata: {},
@@ -420,5 +431,101 @@ describe("POST /api/stripe/webhook", () => {
     const upsertOrder = upsertSubscription.mock.invocationCallOrder[0];
     const mintOrder = mintRedeemToken.mock.invocationCallOrder[0];
     expect(upsertOrder).toBeLessThan(mintOrder);
+  });
+
+  it("reports checkout.session.completed to TikTok as well as Meta, forwarding ttp/ttclid and persisting them to subscription metadata", async () => {
+    subscriptionsRetrieve.mockResolvedValue({
+      metadata: {},
+      items: { data: [{ price: { id: "price_weekly" } }] },
+    });
+    constructEvent.mockReturnValue({
+      type: "checkout.session.completed",
+      id: "evt_tt",
+      data: {
+        object: {
+          id: "cs_test_tt",
+          customer: "cus_tt",
+          subscription: "sub_tt",
+          customer_details: { email: "a@b.com" },
+          amount_total: 499,
+          currency: "usd",
+          metadata: {
+            email: "a@b.com",
+            ttp: "ttp-abc",
+            ttclid: "E.C.P.click123",
+          },
+        },
+      },
+    });
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+    expect(sendTikTokPurchase).toHaveBeenCalledTimes(1);
+    const arg = sendTikTokPurchase.mock.calls[0][0] as Record<string, unknown>;
+    expect(arg.eventId).toBe("cs_test_tt");
+    expect(arg.value).toBe(4.99);
+    expect(arg.ttp).toBe("ttp-abc");
+    expect(arg.ttclid).toBe("E.C.P.click123");
+    // Meta still fires with the same event id, so each network dedups its own pair.
+    expect(sendCapiPurchase).toHaveBeenCalledTimes(1);
+    expect((sendCapiPurchase.mock.calls[0][0] as Record<string, unknown>).eventId).toBe(
+      "cs_test_tt",
+    );
+    // Persisted so a later invoice.paid can still match the originating click.
+    const updateArg = subscriptionsUpdate.mock.calls[0][1];
+    expect(updateArg.metadata.ttp).toBe("ttp-abc");
+    expect(updateArg.metadata.ttclid).toBe("E.C.P.click123");
+  });
+
+  it("maps an annual trial start onto the TikTok trial event, not a purchase", async () => {
+    subscriptionsRetrieve.mockResolvedValue({
+      metadata: {},
+      items: { data: [{ price: { id: "price_annual" } }] },
+    });
+    constructEvent.mockReturnValue({
+      type: "checkout.session.completed",
+      id: "evt_tt2",
+      data: {
+        object: {
+          id: "cs_test_tt_trial",
+          customer: "cus_tt2",
+          subscription: "sub_tt2",
+          customer_details: { email: "a@b.com" },
+          amount_total: 0,
+          currency: "usd",
+          metadata: { email: "a@b.com" },
+        },
+      },
+    });
+    await POST(req());
+    expect(sendTikTokStartTrial).toHaveBeenCalledTimes(1);
+    expect(sendTikTokPurchase).not.toHaveBeenCalled();
+  });
+
+  it("reports invoice.paid to TikTok with ttp/ttclid read from subscription metadata", async () => {
+    subscriptionsRetrieve.mockResolvedValue({
+      metadata: { email: "a@b.com", ttp: "ttp-xyz", ttclid: "E.C.P.click999" },
+      items: { data: [{ price: { id: "price_annual" } }] },
+    });
+    constructEvent.mockReturnValue({
+      type: "invoice.paid",
+      id: "evt_tt3",
+      data: {
+        object: {
+          id: "in_tt_1",
+          subscription: "sub_tt3",
+          amount_paid: 2999,
+          currency: "usd",
+          billing_reason: "subscription_cycle",
+          customer_email: "a@b.com",
+        },
+      },
+    });
+    await POST(req());
+    expect(sendTikTokPurchase).toHaveBeenCalledTimes(1);
+    const arg = sendTikTokPurchase.mock.calls[0][0] as Record<string, unknown>;
+    expect(arg.eventId).toBe("in_tt_1");
+    expect(arg.value).toBe(29.99);
+    expect(arg.ttp).toBe("ttp-xyz");
+    expect(arg.ttclid).toBe("E.C.P.click999");
   });
 });

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FUNNEL_CONFIG, finePrint } from "@/lib/funnel/config";
-import { track, trackCustom } from "@/lib/pixel/events";
+import { track, trackCustom, identify } from "@/lib/pixel/events";
 import "../funnel.css";
 
 // The qualify quiz steps were cut on 2026-08-15: funnel data showed 85% of
@@ -15,6 +15,30 @@ const STEPS: Step[] = ["landing", "email", "paywall"];
 function readCookie(name: string): string | undefined {
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : undefined;
+}
+
+// TikTok's click id arrives as a ttclid query param on the ad click. The pixel
+// stores it in a _ttclid cookie, but only once its SDK has loaded, so the URL is
+// read first and the value stashed in sessionStorage to survive the funnel's
+// later steps (the param is gone after the Stripe round trip).
+const TTCLID_KEY = "v2p_ttclid";
+
+function readTtclid(): string | undefined {
+  const fromUrl = new URLSearchParams(window.location.search).get("ttclid");
+  if (fromUrl) {
+    try {
+      window.sessionStorage.setItem(TTCLID_KEY, fromUrl);
+    } catch {
+      // Private-mode storage failures are non-fatal: attribution degrades to
+      // the _ttp cookie and email match.
+    }
+    return fromUrl;
+  }
+  try {
+    return window.sessionStorage.getItem(TTCLID_KEY) ?? readCookie("_ttclid");
+  } catch {
+    return readCookie("_ttclid");
+  }
 }
 
 function StepProgress({ step }: { step: Step }) {
@@ -68,6 +92,8 @@ export function Funnel() {
 
   useEffect(() => {
     track("ViewContent");
+    // Stash the TikTok click id before the funnel navigates away from the ad URL.
+    readTtclid();
     const params = new URLSearchParams(window.location.search);
     const source = params.get("src") ?? "direct";
     const campaign = params.get("utm_campaign") ?? "";
@@ -108,13 +134,16 @@ export function Funnel() {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        // _fbp/_fbc ride along into Stripe session metadata so the webhook's
-        // server-side CAPI events can match the click, not just the email.
+        // Meta's _fbp/_fbc and TikTok's _ttp/ttclid ride along into Stripe
+        // session metadata so the webhook's server-side conversion events can
+        // match the click, not just the email.
         body: JSON.stringify({
           plan,
           email,
           fbp: readCookie("_fbp"),
           fbc: readCookie("_fbc"),
+          ttp: readCookie("_ttp"),
+          ttclid: readTtclid(),
           ...(utmCampaign ? { utmCampaign } : {}),
           ...(utmContent ? { utmContent } : {}),
         }),
@@ -186,6 +215,9 @@ export function Funnel() {
         <button
           disabled={!email}
           onClick={() => {
+            // Identify before Lead so this and every later TikTok event on the
+            // page carries the (SDK-hashed) email as a match signal.
+            identify(email);
             track("Lead");
             trackCustom("funnel_email_submitted");
             // Fire-and-forget: lead capture must never block or error out the

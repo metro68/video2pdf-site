@@ -5,7 +5,7 @@ import { FUNNEL_CONFIG } from "@/lib/funnel/config";
 type Plan = "weekly" | "annual";
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const { plan, email, fbp, fbc, utmCampaign, utmContent } = await request
+  const { plan, email, fbp, fbc, ttp, ttclid, utmCampaign, utmContent } = await request
     .json()
     .catch(() => ({}));
   if (plan !== "weekly" && plan !== "annual") {
@@ -14,13 +14,15 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!email || typeof email !== "string") {
     return NextResponse.json({ error: "Missing email" }, { status: 400 });
   }
-  // Meta browser cookies and utm fields, forwarded by the funnel so the webhook's
-  // CAPI events can carry click/browser identifiers. Stripe metadata values cap
-  // at 500 chars.
+  // Meta and TikTok browser cookies plus utm fields, forwarded by the funnel so
+  // the webhook's server-side events can carry click/browser identifiers.
+  // Stripe metadata values cap at 500 chars.
   const cleanMeta = (v: unknown): string | undefined =>
     typeof v === "string" && v.length > 0 && v.length <= 500 ? v : undefined;
   const metaFbp = cleanMeta(fbp);
   const metaFbc = cleanMeta(fbc);
+  const metaTtp = cleanMeta(ttp);
+  const metaTtclid = cleanMeta(ttclid);
   const metaUtmCampaign = cleanMeta(utmCampaign);
   const metaUtmContent = cleanMeta(utmContent);
   const priceEnv: Record<Plan, string | undefined> = {
@@ -43,6 +45,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       email,
       ...(metaFbp ? { fbp: metaFbp } : {}),
       ...(metaFbc ? { fbc: metaFbc } : {}),
+      ...(metaTtp ? { ttp: metaTtp } : {}),
+      ...(metaTtclid ? { ttclid: metaTtclid } : {}),
       ...(metaUtmCampaign ? { utm_campaign: metaUtmCampaign } : {}),
       ...(metaUtmContent ? { utm_content: metaUtmContent } : {}),
     },
@@ -51,6 +55,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         email,
         ...(metaFbp ? { fbp: metaFbp } : {}),
         ...(metaFbc ? { fbc: metaFbc } : {}),
+        ...(metaTtp ? { ttp: metaTtp } : {}),
+        ...(metaTtclid ? { ttclid: metaTtclid } : {}),
         ...(metaUtmCampaign ? { utm_campaign: metaUtmCampaign } : {}),
         ...(metaUtmContent ? { utm_content: metaUtmContent } : {}),
       },

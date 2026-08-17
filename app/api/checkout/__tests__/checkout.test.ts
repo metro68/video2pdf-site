@@ -101,4 +101,30 @@ describe("POST /api/checkout", () => {
     expect(args.metadata.utm_content).toBeUndefined();
     expect(args.subscription_data.metadata.utm_campaign).toBeUndefined();
   });
+
+  it("passes Meta and TikTok click identifiers into session and subscription metadata", async () => {
+    await POST(req({
+      plan: "annual",
+      email: "a@b.com",
+      fbp: "fb.1.1.2",
+      fbc: "fb.1.1.IwAR3",
+      ttp: "ttp-abc",
+      ttclid: "E.C.P.click123",
+    }));
+    const args = firstCallArgs();
+    for (const md of [args.metadata, args.subscription_data.metadata]) {
+      expect(md.fbp).toBe("fb.1.1.2");
+      expect(md.fbc).toBe("fb.1.1.IwAR3");
+      expect(md.ttp).toBe("ttp-abc");
+      expect(md.ttclid).toBe("E.C.P.click123");
+    }
+  });
+
+  it("omits TikTok identifier keys when absent or invalid", async () => {
+    await POST(req({ plan: "annual", email: "a@b.com", ttp: 42 }));
+    const args = firstCallArgs();
+    expect(args.metadata.ttp).toBeUndefined();
+    expect(args.metadata.ttclid).toBeUndefined();
+    expect(args.subscription_data.metadata.ttp).toBeUndefined();
+  });
 });
