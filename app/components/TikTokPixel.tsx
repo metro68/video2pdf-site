@@ -6,7 +6,13 @@ import Script from "next/script";
 import { trackTikTokPageView } from "@/lib/pixel/events";
 
 export function TikTokPixel() {
-  const pixelId = process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID;
+  // Comma-separated so more pixels can be added without a code change. TikTok
+  // requires a separate pixel per targeted region, so the USA campaigns run on
+  // their own id alongside the original.
+  const ids = (process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
   const pathname = usePathname();
   const mounted = useRef(false);
 
@@ -18,10 +24,14 @@ export function TikTokPixel() {
       mounted.current = true;
       return;
     }
-    if (pixelId) trackTikTokPageView();
-  }, [pathname, pixelId]);
+    if (ids.length) trackTikTokPageView();
+  }, [pathname, ids.length]);
 
-  if (!pixelId) return null;
+  if (!ids.length) return null;
+
+  // ttq.load() is called once per pixel. The SDK keeps an instance per id, and
+  // a bare ttq.track()/ttq.page() fans out to all of them.
+  const loadCalls = ids.map((id) => `ttq.load('${id}');`).join("\n        ");
 
   return (
     <Script id="tiktok-pixel" strategy="afterInteractive">{`
@@ -30,7 +40,7 @@ export function TikTokPixel() {
       var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script")
       ;n.type="text/javascript",n.async=!0,n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
 
-        ttq.load('${pixelId}');
+        ${loadCalls}
         ttq.page();
       }(window, document, 'ttq');
     `}</Script>

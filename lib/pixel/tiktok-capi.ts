@@ -20,40 +20,70 @@ export interface SendTikTokEventInput {
   url?: string;
 }
 
+function splitEnv(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
 /**
- * TikTok's standard event names differ from Meta's; callers pass the TikTok
- * name directly. `event_id` is shared with the browser pixel event so TikTok
- * dedups the pair (it keys on event_source_id + event + event_id).
+ * Pairs each pixel id with its own access token, positionally. TikTok issues a
+ * separate token per pixel, so the two lists must line up: the Nth id is sent
+ * with the Nth token. A single shared token is also supported, since one token
+ * is reused for every id when only one is configured.
+ */
+function pixelTargets(): { pixelId: string; token: string }[] {
+  const ids = splitEnv(process.env.TIKTOK_PIXEL_ID);
+  const tokens = splitEnv(process.env.TIKTOK_EVENTS_ACCESS_TOKEN);
+  if (!ids.length || !tokens.length) return [];
+  return ids
+    .map((pixelId, i) => ({ pixelId, token: tokens.length === 1 ? tokens[0] : tokens[i] }))
+    .filter((target): target is { pixelId: string; token: string } => Boolean(target.token));
+}
+
+/**
+ * Sends one server-side event to every configured pixel. `event_id` is shared
+ * with the browser pixel event so TikTok dedups the pair (it keys on
+ * event_source_id + event + event_id), and since each pixel gets the same
+ * event_id, each dedups independently against its own browser event.
+ *
+ * Failures are swallowed per pixel: one pixel's token being wrong must not stop
+ * the others from reporting, nor fail the Stripe webhook and trigger a retry
+ * that double-reports to the pixels that already succeeded.
  */
 async function sendTikTokEvent(eventName: string, input: SendTikTokEventInput): Promise<void> {
-  const pixelId = process.env.TIKTOK_PIXEL_ID;
-  const token = process.env.TIKTOK_EVENTS_ACCESS_TOKEN;
-  if (!pixelId || !token) return;
+  const targets = pixelTargets();
+  if (!targets.length) return;
 
-  const body = {
-    event_source: "web",
-    event_source_id: pixelId,
-    data: [
-      {
-        event: eventName,
-        event_time: Math.floor(Date.now() / 1000),
-        event_id: input.eventId,
-        user: {
-          email: sha256(input.email),
-          ...(input.ttp ? { ttp: input.ttp } : {}),
-          ...(input.ttclid ? { ttclid: input.ttclid } : {}),
-        },
-        ...(input.url ? { page: { url: input.url } } : {}),
-        properties: { value: input.value, currency: input.currency },
-      },
-    ],
-  };
+  const eventTime = Math.floor(Date.now() / 1000);
 
-  await fetch(ENDPOINT, {
-    method: "POST",
-    headers: { "content-type": "application/json", "Access-Token": token },
-    body: JSON.stringify(body),
-  });
+  await Promise.allSettled(
+    targets.map(({ pixelId, token }) =>
+      fetch(ENDPOINT, {
+        method: "POST",
+        headers: { "content-type": "application/json", "Access-Token": token },
+        body: JSON.stringify({
+          event_source: "web",
+          event_source_id: pixelId,
+          data: [
+            {
+              event: eventName,
+              event_time: eventTime,
+              event_id: input.eventId,
+              user: {
+                email: sha256(input.email),
+                ...(input.ttp ? { ttp: input.ttp } : {}),
+                ...(input.ttclid ? { ttclid: input.ttclid } : {}),
+              },
+              ...(input.url ? { page: { url: input.url } } : {}),
+              properties: { value: input.value, currency: input.currency },
+            },
+          ],
+        }),
+      })
+    )
+  );
 }
 
 /**

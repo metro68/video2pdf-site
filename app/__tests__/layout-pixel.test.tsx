@@ -4,6 +4,13 @@ import { MetaPixel } from "@/app/components/MetaPixel";
 import { TikTokPixel } from "@/app/components/TikTokPixel";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/go" }));
+// next/script does not render children into the DOM under jsdom, so stand in a
+// plain script tag to make the generated snippet inspectable.
+vi.mock("next/script", () => ({
+  default: ({ children, id }: { children?: string; id?: string }) => (
+    <script data-testid={id}>{children}</script>
+  ),
+}));
 
 describe("MetaPixel", () => {
   it("renders nothing when no pixel id is configured", () => {
@@ -27,5 +34,23 @@ describe("TikTokPixel", () => {
     expect(page).not.toHaveBeenCalled();
     vi.unstubAllEnvs();
     (globalThis as any).ttq = undefined;
+  });
+
+  it("emits one ttq.load call per comma-separated pixel id", () => {
+    vi.stubEnv("NEXT_PUBLIC_TIKTOK_PIXEL_ID", "TTPIX1, TTPIX2");
+    const { container } = render(<TikTokPixel />);
+    const snippet = container.textContent ?? "";
+    expect(snippet).toContain("ttq.load('TTPIX1');");
+    expect(snippet).toContain("ttq.load('TTPIX2');");
+    // A single shared ttq.page() fans out to every loaded pixel.
+    expect(snippet.match(/ttq\.page\(\)/g)).toHaveLength(1);
+    vi.unstubAllEnvs();
+  });
+
+  it("renders nothing when the pixel id is only whitespace or commas", () => {
+    vi.stubEnv("NEXT_PUBLIC_TIKTOK_PIXEL_ID", " , ");
+    const { container } = render(<TikTokPixel />);
+    expect(container.firstChild).toBeNull();
+    vi.unstubAllEnvs();
   });
 });
