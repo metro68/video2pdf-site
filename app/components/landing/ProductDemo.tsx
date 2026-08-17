@@ -115,7 +115,7 @@ export function ProductDemo({ heightClassName = "h-[340px] sm:h-[460px]" }: { he
       {/* Finished PDF with search */}
       <div className="absolute right-0 top-1/2 z-20 -translate-y-1/2">
         <motion.div
-          className="relative w-44 rounded-xl border border-border bg-card p-3 shadow-2xl shadow-black/50 sm:w-52"
+          className="relative w-40 rounded-xl border border-border bg-card p-3 shadow-2xl shadow-black/50 sm:w-52"
           animate={reduce ? undefined : { y: [0, -6, 0] }}
           transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
         >
