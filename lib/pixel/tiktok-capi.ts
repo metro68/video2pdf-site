@@ -61,10 +61,7 @@ export async function sendTikTokPurchase(input: SendTikTokEventInput): Promise<v
   await sendTikTokEvent("CompletePayment", input);
 }
 
-/**
- * A free trial started. TikTok has no StartTrial event, so this reports
- * Subscribe, the closest standard event its optimizer bids on.
- */
+/** A free trial started. StartTrial is a TikTok standard event in its own right. */
 export async function sendTikTokStartTrial(input: SendTikTokEventInput): Promise<void> {
-  await sendTikTokEvent("Subscribe", input);
+  await sendTikTokEvent("StartTrial", input);
 }

@@ -69,10 +69,10 @@ describe("sendTikTokPurchase", () => {
 });
 
 describe("sendTikTokStartTrial", () => {
-  it("maps a trial start onto TikTok's Subscribe event", async () => {
+  it("posts TikTok's standard StartTrial event", async () => {
     await sendTikTokStartTrial({ email: "a@b.com", value: 29.99, currency: "USD", eventId: "evt_5" });
     const body = bodyOf();
-    expect(body.data[0].event).toBe("Subscribe");
+    expect(body.data[0].event).toBe("StartTrial");
     expect(body.data[0].event_id).toBe("evt_5");
     expect(body.data[0].properties.value).toBe(29.99);
   });

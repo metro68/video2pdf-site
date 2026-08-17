@@ -6,13 +6,11 @@ export type PixelEvent =
   | "StartTrial"
   | "Purchase";
 
-// TikTok's standard event vocabulary differs from Meta's. Anything not listed
-// here has the same name on both networks (PageView, ViewContent, Lead).
-// TikTok has no StartTrial, so a trial start is reported as Subscribe, which is
-// the closest standard event its optimizer understands.
+// TikTok's standard event vocabulary mostly matches Meta's: ViewContent, Lead,
+// InitiateCheckout and StartTrial are all named identically on both networks,
+// so they need no entry here. Purchase is the one that differs: TikTok's web
+// pixel names it CompletePayment.
 const TIKTOK_EVENT_NAMES: Partial<Record<PixelEvent, string>> = {
-  InitiateCheckout: "InitiateCheckout",
-  StartTrial: "Subscribe",
   Purchase: "CompletePayment",
 };
 

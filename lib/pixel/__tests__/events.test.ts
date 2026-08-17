@@ -54,10 +54,10 @@ describe("track", () => {
     );
   });
 
-  it("maps StartTrial onto TikTok's Subscribe event", () => {
+  it("sends StartTrial to TikTok unchanged, since it is a standard event there too", () => {
     track("StartTrial", { value: 29.99, currency: "USD" });
     expect((globalThis as any).ttq.track).toHaveBeenCalledWith(
-      "Subscribe",
+      "StartTrial",
       { value: 29.99, currency: "USD" },
       {}
     );
