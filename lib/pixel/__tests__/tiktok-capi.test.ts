@@ -22,7 +22,7 @@ beforeEach(() => {
 });
 
 describe("sendTikTokPurchase", () => {
-  it("posts CompletePayment to the v1.3 track endpoint with the access token header", async () => {
+  it("posts Purchase to the v1.3 track endpoint with the access token header", async () => {
     await sendTikTokPurchase({ email: "a@b.com", value: 4.99, currency: "USD", eventId: "evt_1" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
@@ -31,7 +31,7 @@ describe("sendTikTokPurchase", () => {
     const body = bodyOf();
     expect(body.event_source).toBe("web");
     expect(body.event_source_id).toBe("TTPIX1");
-    expect(body.data[0].event).toBe("CompletePayment");
+    expect(body.data[0].event).toBe("Purchase");
     expect(body.data[0].event_id).toBe("evt_1");
     expect(body.data[0].properties.value).toBe(4.99);
     expect(body.data[0].properties.currency).toBe("USD");

@@ -45,10 +45,10 @@ describe("track", () => {
     expect(() => track("PageView")).not.toThrow();
   });
 
-  it("also forwards to ttq, mapping Purchase onto CompletePayment", () => {
+  it("also forwards to ttq, keeping Purchase under its current TikTok name", () => {
     track("Purchase", { value: 4.99, currency: "USD" }, "evt_1");
     expect((globalThis as any).ttq.track).toHaveBeenCalledWith(
-      "CompletePayment",
+      "Purchase",
       { value: 4.99, currency: "USD" },
       { event_id: "evt_1" }
     );
@@ -63,9 +63,14 @@ describe("track", () => {
     );
   });
 
-  it("keeps shared event names unchanged for TikTok", () => {
+  it("maps Lead onto Contact, since Lead is a TikTok objective and not a web event", () => {
     track("Lead");
-    expect((globalThis as any).ttq.track).toHaveBeenCalledWith("Lead", {}, {});
+    expect((globalThis as any).ttq.track).toHaveBeenCalledWith("Contact", {}, {});
+  });
+
+  it("keeps shared event names unchanged for TikTok", () => {
+    track("ViewContent");
+    expect((globalThis as any).ttq.track).toHaveBeenCalledWith("ViewContent", {}, {});
   });
 
   it("routes PageView to ttq.page rather than ttq.track", () => {
@@ -77,7 +82,7 @@ describe("track", () => {
   it("still reports to TikTok when the Meta pixel is absent", () => {
     (globalThis as any).fbq = undefined;
     track("Lead");
-    expect((globalThis as any).ttq.track).toHaveBeenCalledWith("Lead", {}, {});
+    expect((globalThis as any).ttq.track).toHaveBeenCalledWith("Contact", {}, {});
   });
 
   it("no-ops safely when ttq is undefined", () => {

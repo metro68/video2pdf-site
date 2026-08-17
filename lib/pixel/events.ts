@@ -6,12 +6,16 @@ export type PixelEvent =
   | "StartTrial"
   | "Purchase";
 
-// TikTok's standard event vocabulary mostly matches Meta's: ViewContent, Lead,
-// InitiateCheckout and StartTrial are all named identically on both networks,
-// so they need no entry here. Purchase is the one that differs: TikTok's web
-// pixel names it CompletePayment.
+// ViewContent, InitiateCheckout, StartTrial and Purchase are named identically
+// on both networks, so they need no entry here. Lead is the exception: on TikTok
+// it is a campaign objective, not a web event code, so sending it would register
+// an unoptimizable custom event. Contact is TikTok's standard lead-type event
+// and the closest fit for handing over an email address.
+//
+// Note on Purchase: TikTok renamed CompletePayment to Purchase in May 2025. The
+// old name is still auto-converted in reporting, but new setups send Purchase.
 const TIKTOK_EVENT_NAMES: Partial<Record<PixelEvent, string>> = {
-  Purchase: "CompletePayment",
+  Lead: "Contact",
 };
 
 function getFbq(): ((...args: unknown[]) => void) | undefined {

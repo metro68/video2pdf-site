@@ -56,9 +56,13 @@ async function sendTikTokEvent(eventName: string, input: SendTikTokEventInput): 
   });
 }
 
-/** A card was actually charged. TikTok's standard purchase event. */
+/**
+ * A card was actually charged. TikTok renamed this event from CompletePayment
+ * to Purchase in May 2025; the old name is still auto-converted in reporting,
+ * but new setups send Purchase.
+ */
 export async function sendTikTokPurchase(input: SendTikTokEventInput): Promise<void> {
-  await sendTikTokEvent("CompletePayment", input);
+  await sendTikTokEvent("Purchase", input);
 }
 
 /** A free trial started. StartTrial is a TikTok standard event in its own right. */
