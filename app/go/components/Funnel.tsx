@@ -174,7 +174,7 @@ export function Funnel() {
     return (
       <Shell step={step}>
         <div className="bindy-float">
-          <img src="/assets/bindy.png" alt="Bindy the bookworm" className="h-auto w-32" />
+          <img src="/assets/bindy.png" alt="Bindy the bookworm" className="h-auto w-28" />
         </div>
         <h1 className="mt-4 text-3xl font-bold text-center">
           Turn any video or scan into a searchable PDF
@@ -183,11 +183,12 @@ export function Funnel() {
           Join {count}+ people scanning smarter.
         </p>
         <div className="mt-4 w-full">
-          <ProductDemo heightClassName="h-[280px]" />
+          <ProductDemo heightClassName="h-[260px]" />
         </div>
         {/* Sticky with a fade so the CTA stays on screen even when a short
-            viewport pushes the natural button position below the fold. */}
-        <div className="sticky bottom-0 -mb-24 w-full bg-gradient-to-t from-brand-bg via-brand-bg/90 to-transparent pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+            viewport pushes the natural button position below the fold. z-30
+            keeps it above the demo cards (z-20) when they overlap. */}
+        <div className="sticky bottom-0 z-30 -mb-24 w-full bg-gradient-to-t from-brand-bg via-brand-bg/90 to-transparent pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <button
             onClick={() => {
               trackCustom("funnel_get_started");
