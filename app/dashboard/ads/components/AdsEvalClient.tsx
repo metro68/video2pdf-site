@@ -10,6 +10,7 @@ import VerdictBanner from "./VerdictBanner";
 import AssumptionsPanel from "./AssumptionsPanel";
 import CohortChart from "./CohortChart";
 import AdTable from "./AdTable";
+import TikTokAdsSection from "./TikTokAdsSection";
 import DeductionsPanel from "./DeductionsPanel";
 
 const DAY_OPTIONS = [7, 14, 30] as const;
@@ -122,7 +123,7 @@ export default function AdsEvalClient() {
               <h1 className="text-xl font-bold text-brand-primary">Video2PDF Analytics</h1>
               <p className="text-xs text-brand-text-secondary">
                 Is Meta ad spend paying for itself, based on Stripe&apos;s actual trial and payment
-                records.
+                records. TikTok ad performance is shown separately below.
               </p>
             </div>
           </div>
@@ -233,6 +234,8 @@ export default function AdsEvalClient() {
         ) : (
           <AdTable ads={payload.ads} deductions={payload.deductions} breakEvenCpaGbp={economics.breakEvenCpaGbp} />
         )}
+
+        <TikTokAdsSection days={days} />
 
         {stripeErrorMsg ? (
           <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-500">
