@@ -22,6 +22,7 @@ interface ChannelFunnelRow {
   leads: number;
   trials: number;
   paying: number;
+  campaigns: Array<{ campaign: string; leads: number; trials: number; paying: number }>;
 }
 
 interface ChannelsResponse {
@@ -276,7 +277,7 @@ export default function DashboardClient({ role }: { role: Role }) {
             />
             <StackedDailyChart
               title={`Trial starts per day (${monthLabel})`}
-              note={`Includes today. Web trials from Stripe (live, exact, test accounts excluded). App trials ${
+              note={`Includes today. Web trials from Stripe (live, exact, test accounts excluded); subscriptions bought outright with no trial, like the weekly plan, are not trials and appear here as 0. App trials ${
                 sources.data.appTrialsSource === "posthog"
                   ? "from PostHog's first-party trial_started event (near realtime, includes organic app trials)."
                   : "from AppsFlyer's ad-attributed af_start_trial events (PostHog was unavailable for this load): lags hours and misses organic app trials."
@@ -354,9 +355,11 @@ export default function DashboardClient({ role }: { role: Role }) {
             Our own first-party attribution for {monthLabel}, from the src tag on /go links.
             A lead is one person who typed their email into the funnel&apos;s email step;
             visitors who left before that are not counted, and repeat visits by the same email
-            count once. Trials are subscriptions started this month, and now paying are the
-            ones past their trial, each matched to its lead&apos;s channel by email. Unlike the
-            ad platforms&apos; self-reported numbers above, these are counted on our side.
+            count once. Subs are subscriptions started this month, with or without a trial
+            (the weekly plan has none), and now paying are the ones currently active, each
+            matched to its lead&apos;s channel by email. Campaign lines under a channel come
+            from the utm_campaign tag on the ad link. Unlike the ad platforms&apos;
+            self-reported numbers above, these are counted on our side.
           </p>
           <div className="rounded-xl bg-brand-bg-card border border-brand-border p-4 overflow-x-auto">
             {channels?.status === "ok" && channels.data ? (
@@ -366,14 +369,21 @@ export default function DashboardClient({ role }: { role: Role }) {
                     <tr className="text-left text-xs text-brand-text-secondary">
                       <th className="py-1.5 pr-4 font-medium">Channel</th>
                       <th className="py-1.5 pr-4 font-medium">Leads (emails captured)</th>
-                      <th className="py-1.5 pr-4 font-medium">Trials started</th>
+                      <th className="py-1.5 pr-4 font-medium">Subs started</th>
                       <th className="py-1.5 font-medium">Now paying</th>
                     </tr>
                   </thead>
                   <tbody>
                     {channels.data.channels.map((c) => (
                       <tr key={c.channel} className="border-t border-brand-border text-brand-text">
-                        <td className="py-1.5 pr-4 font-medium">{c.channel}</td>
+                        <td className="py-1.5 pr-4 font-medium">
+                          <div>{c.channel}</div>
+                          {c.campaigns.map((cp) => (
+                            <div key={cp.campaign} className="text-xs font-normal text-brand-text-secondary">
+                              {cp.campaign}: {cp.leads} leads, {cp.trials} subs, {cp.paying} paying
+                            </div>
+                          ))}
+                        </td>
                         <td className="py-1.5 pr-4">{c.leads.toLocaleString()}</td>
                         <td className="py-1.5 pr-4">{c.trials.toLocaleString()}</td>
                         <td className="py-1.5">{c.paying.toLocaleString()}</td>

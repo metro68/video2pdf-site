@@ -47,9 +47,44 @@ describe("fetchChannelFunnel", () => {
     const rows = await fetchChannelFunnel("2026-08");
 
     expect(rows).toEqual([
-      { channel: "tiktok", leads: 3, trials: 2, paying: 1 },
-      { channel: "tiktok_bio", leads: 2, trials: 0, paying: 0 },
-      { channel: "unknown", leads: 1, trials: 1, paying: 0 },
+      {
+        channel: "tiktok",
+        leads: 3,
+        trials: 2,
+        paying: 1,
+        campaigns: [{ campaign: "aug", leads: 3, trials: 2, paying: 1 }],
+      },
+      { channel: "tiktok_bio", leads: 2, trials: 0, paying: 0, campaigns: [] },
+      { channel: "unknown", leads: 1, trials: 1, paying: 0, campaigns: [] },
+    ]);
+  });
+
+  it("splits a channel's counts across its campaigns", async () => {
+    sqlMock
+      .mockResolvedValueOnce({
+        rows: [
+          { src: "meta|c:aug-ugc|a:1", n: 4 },
+          { src: "meta|c:retarget|a:2", n: 1 },
+          { src: "meta", n: 1 },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [{ src: "meta|c:retarget|a:2", trials: 1, paying: 0 }],
+      });
+
+    const rows = await fetchChannelFunnel("2026-08");
+
+    expect(rows).toEqual([
+      {
+        channel: "meta",
+        leads: 6,
+        trials: 1,
+        paying: 0,
+        campaigns: [
+          { campaign: "aug-ugc", leads: 4, trials: 0, paying: 0 },
+          { campaign: "retarget", leads: 1, trials: 1, paying: 0 },
+        ],
+      },
     ]);
   });
 
@@ -60,7 +95,15 @@ describe("fetchChannelFunnel", () => {
 
     const rows = await fetchChannelFunnel("2026-08");
 
-    expect(rows).toEqual([{ channel: "meta", leads: 0, trials: 1, paying: 1 }]);
+    expect(rows).toEqual([
+      {
+        channel: "meta",
+        leads: 0,
+        trials: 1,
+        paying: 1,
+        campaigns: [{ campaign: "x", leads: 0, trials: 1, paying: 1 }],
+      },
+    ]);
   });
 
   it("bounds both queries to the calendar month, exclusive of the next", async () => {

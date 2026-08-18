@@ -8,19 +8,36 @@ import { resolveMonthWindow } from "@/lib/month";
 // a subscription's channel is its lead's channel. Last touch wins: a returning
 // lead overwrites src with the latest visit's source.
 
+export interface CampaignFunnelRow {
+  campaign: string;
+  leads: number;
+  trials: number;
+  paying: number;
+}
+
 export interface ChannelFunnelRow {
   channel: string;
   /** Emails captured on /go this month. */
   leads: number;
-  /** Subscriptions created this month (they start as trials). */
+  /** Subscriptions created this month, with or without a trial (the weekly
+   * plan has no trial and starts straight at "active"). */
   trials: number;
-  /** Of those, currently in status "active", i.e. past trial and paying. */
+  /** Of those, currently in status "active", i.e. paying. */
   paying: number;
+  /** Per-campaign split of the counts above, for srcs carrying a c: segment.
+   * Sums can fall short of the channel totals when some srcs lack one. */
+  campaigns: CampaignFunnelRow[];
 }
 
 export function channelOf(src: string | null): string {
   const head = (src ?? "").split("|")[0].trim();
   return head === "" ? "unknown" : head;
+}
+
+export function campaignOf(src: string | null): string | null {
+  const seg = (src ?? "").split("|").find((s) => s.startsWith("c:"));
+  const campaign = seg?.slice(2).trim() ?? "";
+  return campaign === "" ? null : campaign;
 }
 
 function monthBounds(month?: string): { from: string; toExclusive: string } {
@@ -50,21 +67,50 @@ export async function fetchChannelFunnel(month?: string): Promise<ChannelFunnelR
   `;
 
   const byChannel = new Map<string, ChannelFunnelRow>();
+  const campaignMaps = new Map<string, Map<string, CampaignFunnelRow>>();
   const row = (channel: string): ChannelFunnelRow => {
     let r = byChannel.get(channel);
     if (!r) {
-      r = { channel, leads: 0, trials: 0, paying: 0 };
+      r = { channel, leads: 0, trials: 0, paying: 0, campaigns: [] };
       byChannel.set(channel, r);
+      campaignMaps.set(channel, new Map());
     }
     return r;
   };
+  const campaignRow = (channel: string, campaign: string): CampaignFunnelRow => {
+    const map = campaignMaps.get(channel)!;
+    let r = map.get(campaign);
+    if (!r) {
+      r = { campaign, leads: 0, trials: 0, paying: 0 };
+      map.set(campaign, r);
+    }
+    return r;
+  };
+
   for (const r of leadRows.rows) {
-    row(channelOf(r.src)).leads += Number(r.n) || 0;
+    const channel = channelOf(r.src);
+    const n = Number(r.n) || 0;
+    row(channel).leads += n;
+    const campaign = campaignOf(r.src);
+    if (campaign) campaignRow(channel, campaign).leads += n;
   }
   for (const r of subRows.rows) {
-    const target = row(channelOf(r.src));
-    target.trials += Number(r.trials) || 0;
-    target.paying += Number(r.paying) || 0;
+    const channel = channelOf(r.src);
+    const trials = Number(r.trials) || 0;
+    const paying = Number(r.paying) || 0;
+    const target = row(channel);
+    target.trials += trials;
+    target.paying += paying;
+    const campaign = campaignOf(r.src);
+    if (campaign) {
+      const c = campaignRow(channel, campaign);
+      c.trials += trials;
+      c.paying += paying;
+    }
+  }
+
+  for (const [channel, map] of campaignMaps) {
+    byChannel.get(channel)!.campaigns = [...map.values()].sort((a, b) => b.leads - a.leads);
   }
 
   return [...byChannel.values()].sort((a, b) => b.leads - a.leads);
