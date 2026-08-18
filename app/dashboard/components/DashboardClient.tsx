@@ -351,10 +351,12 @@ export default function DashboardClient({ role }: { role: Role }) {
         <section>
           <div className="mb-2 text-sm font-semibold text-brand-text">Funnel by channel</div>
           <p className="mb-3 text-xs text-brand-text-secondary">
-            Our own first-party attribution for {monthLabel}, from the src tag on /go links:
-            emails captured (leads), subscriptions started (trials), and those now past their
-            trial and paying, matched to their lead&apos;s channel by email. Unlike the ad
-            platforms&apos; self-reported numbers above, these are counted on our side.
+            Our own first-party attribution for {monthLabel}, from the src tag on /go links.
+            A lead is one person who typed their email into the funnel&apos;s email step;
+            visitors who left before that are not counted, and repeat visits by the same email
+            count once. Trials are subscriptions started this month, and now paying are the
+            ones past their trial, each matched to its lead&apos;s channel by email. Unlike the
+            ad platforms&apos; self-reported numbers above, these are counted on our side.
           </p>
           <div className="rounded-xl bg-brand-bg-card border border-brand-border p-4 overflow-x-auto">
             {channels?.status === "ok" && channels.data ? (
@@ -363,7 +365,7 @@ export default function DashboardClient({ role }: { role: Role }) {
                   <thead>
                     <tr className="text-left text-xs text-brand-text-secondary">
                       <th className="py-1.5 pr-4 font-medium">Channel</th>
-                      <th className="py-1.5 pr-4 font-medium">Leads</th>
+                      <th className="py-1.5 pr-4 font-medium">Leads (emails captured)</th>
                       <th className="py-1.5 pr-4 font-medium">Trials started</th>
                       <th className="py-1.5 font-medium">Now paying</th>
                     </tr>
