@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const { list } = vi.hoisted(() => ({ list: vi.fn() }));
 vi.mock("@/lib/stripe/client", () => ({ getStripe: () => ({ subscriptions: { list } }) }));
@@ -55,6 +55,15 @@ describe("fetchTrialCohort", () => {
   beforeEach(() => {
     list.mockReset();
     vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_123");
+    // fetchTrialCohort classifies against the real clock; pin it to the same
+    // NOW the fixtures are built from, or "pending" trials decide themselves
+    // as real days pass and the expected aggregates rot.
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW * 1000);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("aggregates outcomes and daily counts over the window", async () => {
