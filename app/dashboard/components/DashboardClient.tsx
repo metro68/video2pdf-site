@@ -17,6 +17,19 @@ interface MetricResponse {
   data: Record<string, number> | null;
 }
 
+interface ChannelFunnelRow {
+  channel: string;
+  leads: number;
+  trials: number;
+  paying: number;
+}
+
+interface ChannelsResponse {
+  status: "ok" | "error";
+  asOf: string | null;
+  data: { channels: ChannelFunnelRow[] } | null;
+}
+
 interface SourceSummary {
   source: string;
   label: string;
@@ -64,6 +77,21 @@ export default function DashboardClient({ role }: { role: Role }) {
     () => Object.fromEntries(PROVIDERS.map((p) => [p, null])) as Record<Provider, MetricResponse | null>,
   );
   const [totalDownloads, setTotalDownloads] = useState<MetricResponse | null>(null);
+  const [channels, setChannels] = useState<ChannelsResponse | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setChannels(null);
+    fetch(`/api/metrics/channels?month=${month}`)
+      .then((r) => r.json() as Promise<ChannelsResponse>)
+      .catch(() => ({ status: "error", asOf: null, data: null }) as ChannelsResponse)
+      .then((res) => {
+        if (!cancelled) setChannels(res);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [month]);
   const [sources, setSources] = useState<SourcesResponse | null>(null);
 
   // Install attribution follows the month picker like the provider metrics.
@@ -316,6 +344,50 @@ export default function DashboardClient({ role }: { role: Role }) {
                   </tbody>
                 </table>
               </div>
+            )}
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-2 text-sm font-semibold text-brand-text">Funnel by channel</div>
+          <p className="mb-3 text-xs text-brand-text-secondary">
+            Our own first-party attribution for {monthLabel}, from the src tag on /go links:
+            emails captured (leads), subscriptions started (trials), and those now past their
+            trial and paying, matched to their lead&apos;s channel by email. Unlike the ad
+            platforms&apos; self-reported numbers above, these are counted on our side.
+          </p>
+          <div className="rounded-xl bg-brand-bg-card border border-brand-border p-4 overflow-x-auto">
+            {channels?.status === "ok" && channels.data ? (
+              channels.data.channels.length > 0 ? (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-brand-text-secondary">
+                      <th className="py-1.5 pr-4 font-medium">Channel</th>
+                      <th className="py-1.5 pr-4 font-medium">Leads</th>
+                      <th className="py-1.5 pr-4 font-medium">Trials started</th>
+                      <th className="py-1.5 font-medium">Now paying</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {channels.data.channels.map((c) => (
+                      <tr key={c.channel} className="border-t border-brand-border text-brand-text">
+                        <td className="py-1.5 pr-4 font-medium">{c.channel}</td>
+                        <td className="py-1.5 pr-4">{c.leads.toLocaleString()}</td>
+                        <td className="py-1.5 pr-4">{c.trials.toLocaleString()}</td>
+                        <td className="py-1.5">{c.paying.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-sm text-brand-text-secondary">
+                  No funnel activity recorded in {monthLabel}.
+                </p>
+              )
+            ) : (
+              <p className="text-sm text-brand-text-secondary">
+                {channels?.status === "error" ? "Could not load channel data." : "Loading…"}
+              </p>
             )}
           </div>
         </section>
