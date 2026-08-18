@@ -160,6 +160,9 @@ export interface TrialCohort {
   trials: TrialRecord[];
   aggregates: CohortAggregates;
   dailyTrials: Array<{ date: string; count: number }>;
+  /** Subscriptions bought outright with no trial (e.g. the weekly plan),
+   * bucketed by creation date. Not part of the trial aggregates above. */
+  dailyDirectBuys: Array<{ date: string; count: number }>;
 }
 
 export function classifyTrial(sub: MinimalSub, nowSec: number, trialDays: number): TrialRecord {
@@ -193,6 +196,7 @@ export async function fetchTrialCohort(
 
   try {
     const trials: TrialRecord[] = [];
+    const directByDate = new Map<string, number>();
     let startingAfter: string | undefined;
     let hasMore = true;
     while (hasMore) {
@@ -208,8 +212,16 @@ export async function fetchTrialCohort(
         ...(startingAfter ? { starting_after: startingAfter } : {}),
       });
       for (const sub of page.data) {
-        if (sub.trial_start == null || sub.trial_start < gte || sub.trial_start > lte) continue;
         if (isTestCustomer(sub.customer)) continue;
+        if (sub.trial_start == null) {
+          // No trial at all: a direct purchase (the weekly plan). Skip
+          // incomplete leftovers, which never took a payment.
+          if (sub.status === "incomplete" || sub.status === "incomplete_expired") continue;
+          const date = new Date(sub.created * 1000).toISOString().slice(0, 10);
+          directByDate.set(date, (directByDate.get(date) ?? 0) + 1);
+          continue;
+        }
+        if (sub.trial_start < gte || sub.trial_start > lte) continue;
         trials.push(classifyTrial(sub as unknown as MinimalSub, nowSec, trialDays));
       }
       hasMore = page.has_more;
@@ -235,8 +247,15 @@ export async function fetchTrialCohort(
     const dailyTrials = [...byDate.entries()]
       .map(([date, count]) => ({ date, count }))
       .sort((a, b) => (a.date < b.date ? -1 : 1));
+    const dailyDirectBuys = [...directByDate.entries()]
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
 
-    return { data: { trials, aggregates, dailyTrials }, asOf: new Date().toISOString(), status: "ok" };
+    return {
+      data: { trials, aggregates, dailyTrials, dailyDirectBuys },
+      asOf: new Date().toISOString(),
+      status: "ok",
+    };
   } catch (e) {
     return { data: null, asOf: null, status: "error", error: (e as Error).message };
   }

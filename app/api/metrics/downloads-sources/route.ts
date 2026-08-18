@@ -38,10 +38,16 @@ export async function GET(request: Request): Promise<NextResponse> {
     }
   }
   const webTrialsByDate = new Map((cohort.data?.dailyTrials ?? []).map((d) => [d.date, d.count]));
-  const trialsDaily: Array<{ date: string; web: number; app: number }> = [];
+  const directByDate = new Map((cohort.data?.dailyDirectBuys ?? []).map((d) => [d.date, d.count]));
+  const trialsDaily: Array<{ date: string; web: number; app: number; direct: number }> = [];
   for (let t = new Date(`${window.from}T00:00:00Z`).getTime(); t <= new Date(`${chartTo}T00:00:00Z`).getTime(); t += 864e5) {
     const date = new Date(t).toISOString().slice(0, 10);
-    trialsDaily.push({ date, web: webTrialsByDate.get(date) ?? 0, app: appTrialsByDate.get(date) ?? 0 });
+    trialsDaily.push({
+      date,
+      web: webTrialsByDate.get(date) ?? 0,
+      app: appTrialsByDate.get(date) ?? 0,
+      direct: directByDate.get(date) ?? 0,
+    });
   }
 
   return NextResponse.json({

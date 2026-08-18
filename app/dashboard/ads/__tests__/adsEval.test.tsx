@@ -95,6 +95,7 @@ describe("AdsEvalClient", () => {
       trials: [],
       aggregates: { trials: 20, decided: 15, payers: 6, canceled: 9, pastDue: 0, pending: 5, collectedUsd: 179.94 },
       dailyTrials: [{ date: "2026-08-12", count: 20 }],
+      dailyDirectBuys: [],
     };
     const payload = assemblePayload({
       adRows: [],

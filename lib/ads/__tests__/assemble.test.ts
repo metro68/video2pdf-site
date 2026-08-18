@@ -21,6 +21,7 @@ const COHORT: TrialCohort = {
     { date: "2026-08-11", count: 1 },
     { date: "2026-08-12", count: 3 },
   ],
+  dailyDirectBuys: [],
 };
 
 describe("assemblePayload", () => {

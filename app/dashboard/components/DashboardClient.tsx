@@ -45,7 +45,7 @@ interface SourcesResponse {
   data: {
     sources: SourceSummary[];
     installsDaily: { labels: string[]; points: Array<{ date: string; values: Record<string, number> }> };
-    trialsDaily: Array<{ date: string; web: number; app: number }>;
+    trialsDaily: Array<{ date: string; web: number; app: number; direct: number }>;
     webTrialsOk: boolean;
     appTrialsSource: "posthog" | "appsflyer";
   } | null;
@@ -276,20 +276,22 @@ export default function DashboardClient({ role }: { role: Role }) {
               }))}
             />
             <StackedDailyChart
-              title={`Trial starts per day (${monthLabel})`}
-              note={`Includes today. Web trials from Stripe (live, exact, test accounts excluded); subscriptions bought outright with no trial, like the weekly plan, are not trials and appear here as 0. App trials ${
+              title={`Trials and direct buys per day (${monthLabel})`}
+              note={`Includes today. Web trials from Stripe (live, exact, test accounts excluded). Direct buy is a web subscription bought outright with no trial (the weekly plan), also from Stripe; together the web bars match Stripe's new-subscriptions count. App trials ${
                 sources.data.appTrialsSource === "posthog"
                   ? "from PostHog's first-party trial_started event (near realtime, includes organic app trials)."
                   : "from AppsFlyer's ad-attributed af_start_trial events (PostHog was unavailable for this load): lags hours and misses organic app trials."
               }${sources.data.webTrialsOk ? "" : " Stripe was unavailable for this load, so web bars may read 0."}`}
               series={[
-                { key: "Web", color: CHART_COLORS.categorical[0] },
-                { key: "App", color: CHART_COLORS.categorical[1] },
+                { key: "Web trial", color: CHART_COLORS.categorical[0] },
+                { key: "App trial", color: CHART_COLORS.categorical[1] },
+                { key: "Direct buy", color: CHART_COLORS.categorical[2] },
               ]}
               data={sources.data.trialsDaily.map((d) => ({
                 label: d.date.slice(8),
-                Web: d.web,
-                App: d.app,
+                "Web trial": d.web,
+                "App trial": d.app,
+                "Direct buy": d.direct,
               }))}
             />
           </section>

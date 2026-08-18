@@ -80,6 +80,7 @@ describe("fetchTrialCohort", () => {
     expect(r.status).toBe("ok");
     const agg = r.data!.aggregates;
     expect(agg.trials).toBe(3);
+    expect(r.data!.dailyDirectBuys).toEqual([]);
     expect(agg.payers).toBe(1);
     expect(agg.canceled).toBe(1);
     expect(agg.pending).toBe(1);
@@ -92,6 +93,30 @@ describe("fetchTrialCohort", () => {
     vi.stubEnv("STRIPE_SECRET_KEY", "");
     const r = await fetchTrialCohort("2026-08-01", "2026-08-14");
     expect(r.status).toBe("awaiting_credentials");
+  });
+
+  it("counts no-trial subscriptions as daily direct buys, not trials", async () => {
+    list.mockResolvedValueOnce({
+      data: [
+        sub({ id: "trial", status: "trialing", trial_start: NOW - 1 * DAY }),
+        // Weekly plan bought outright: no trial, active immediately.
+        sub({ id: "direct", status: "active", trial_start: null, created: NOW - 1 * DAY }),
+        // A never-paid checkout leftover must not count as a purchase.
+        sub({ id: "failed", status: "incomplete", trial_start: null, created: NOW - 1 * DAY }),
+        // Test-customer purchases are excluded like test trials.
+        sub({
+          id: "internal",
+          status: "active",
+          trial_start: null,
+          created: NOW - 2 * DAY,
+          customer: { id: "cus_9", name: "ikenna orabueze" },
+        }),
+      ],
+      has_more: false,
+    });
+    const r = await fetchTrialCohort("2026-08-01", "2026-08-14");
+    expect(r.data!.aggregates.trials).toBe(1);
+    expect(r.data!.dailyDirectBuys).toEqual([{ date: "2026-08-13", count: 1 }]);
   });
 
   it("excludes internal test customers and deleted customers from the cohort", async () => {
