@@ -212,12 +212,108 @@ const handlePublish: Handler = async (job, ctx) => {
     return 0;
   }
 
-  // Live publishing is deliberately not wired up here: it requires platform app
-  // review and an explicit go-ahead. The adapters land in M6.
-  throw new Error(
-    "live publishing is not enabled; run with WORKER_DRY_RUN=1 until platform " +
-      "approval and an explicit authorisation to post",
+  // Live publishing below. Reached only when WORKER_DRY_RUN is explicitly off.
+  const { publisherFor, ReconnectRequired } = await import(
+    "../../lib/content/publishers/index.js"
   );
+  const { readTokens, markNeedsReconnect } = await import(
+    "../../lib/db/content/tokens.js"
+  );
+  const { signedUrl } = await import("../../lib/content/storage.js");
+
+  const detail = await query<{
+    account_id: number;
+    platform_account_id: string | null;
+    render_key: string | null;
+    asset_keys: string[];
+    format: string;
+  }>(
+    `SELECT p.account_id, a.platform_account_id, v.render_key, v.asset_keys, c.format
+     FROM publications p
+     JOIN social_accounts a ON a.id = p.account_id
+     JOIN variants v ON v.id = p.variant_id
+     JOIN concepts c ON c.id = v.concept_id
+     WHERE p.id = $1`,
+    [publicationId],
+  );
+  const d = detail.rows[0];
+  if (!d?.platform_account_id) {
+    throw new Error("account has no platform id; reconnect it");
+  }
+
+  const tokens = await readTokens(d.account_id);
+  if (!tokens) {
+    await markNeedsReconnect(d.account_id);
+    throw new Error("no usable credentials for this account; reconnect it");
+  }
+
+  // Both platforms fetch the media themselves, so a private bucket key will not
+  // do. The signed URL must outlast the platform's own processing, which for a
+  // video can run to minutes.
+  const MEDIA_URL_TTL_SECONDS = 3600;
+  const isCarousel = d.format === "carousel";
+  const slideUrls = isCarousel
+    ? await Promise.all(d.asset_keys.map((k) => signedUrl(k, MEDIA_URL_TTL_SECONDS)))
+    : [];
+  const mediaUrl = d.render_key
+    ? await signedUrl(d.render_key, MEDIA_URL_TTL_SECONDS)
+    : (slideUrls[0] ?? "");
+  if (!mediaUrl) throw new Error("nothing rendered to publish");
+
+  await query(
+    `UPDATE publications SET status = 'publishing', attempts = attempts + 1,
+     updated_at = now() WHERE id = $1`,
+    [publicationId],
+  );
+
+  const publisher = publisherFor(row.platform as "instagram" | "tiktok");
+
+  try {
+    const published = isCarousel
+      ? await publisher.publishCarousel({
+          accountId: d.account_id,
+          platformAccountId: d.platform_account_id,
+          accessToken: tokens.accessToken,
+          mediaUrl,
+          caption: row.caption ?? "",
+          slideUrls,
+        })
+      : await publisher.publishVideo({
+          accountId: d.account_id,
+          platformAccountId: d.platform_account_id,
+          accessToken: tokens.accessToken,
+          mediaUrl,
+          caption: row.caption ?? "",
+        });
+
+    await query(
+      `UPDATE publications
+       SET status = 'published', platform_post_id = $2, post_url = $3,
+           published_at = now(), last_error = NULL, updated_at = now()
+       WHERE id = $1`,
+      [publicationId, published.platformPostId, published.postUrl],
+    );
+    ctx.log(`publication ${publicationId} published as ${published.platformPostId}`);
+    return 0;
+  } catch (err) {
+    // A credential failure is not worth retrying: flag the account so the
+    // dashboard prompts a reconnect and the scheduler stops queueing for it.
+    if (err instanceof ReconnectRequired) {
+      await markNeedsReconnect(d.account_id);
+      await query(
+        `UPDATE publications SET status = 'failed', last_error = $2, updated_at = now()
+         WHERE id = $1`,
+        [publicationId, `reconnect required: ${err.message}`],
+      );
+      throw new Error(`reconnect required for account ${d.account_id}: ${err.message}`);
+    }
+    await query(
+      `UPDATE publications SET status = 'failed', last_error = $2, updated_at = now()
+       WHERE id = $1`,
+      [publicationId, err instanceof Error ? err.message : String(err)],
+    );
+    throw err;
+  }
 };
 
 const handleRender: Handler = async () => notImplemented("render");
