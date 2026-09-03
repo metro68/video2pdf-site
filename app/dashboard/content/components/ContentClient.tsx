@@ -6,6 +6,8 @@ import TrendsView from "./TrendsView";
 import CampaignsView from "./CampaignsView";
 import ReviewView from "./ReviewView";
 import CalendarView from "./CalendarView";
+import ResultsView from "./ResultsView";
+import AvatarsView from "./AvatarsView";
 
 // The content engine's six views live inside the Content tab rather than as
 // six more top-level dashboard tabs, so the dashboard's own tab strip stays
@@ -66,29 +68,11 @@ export default function ContentClient() {
         {view === "campaigns" ? <CampaignsView /> : null}
         {view === "review" ? <ReviewView /> : null}
         {view === "calendar" ? <CalendarView /> : null}
-        {view !== "trends" &&
-        view !== "campaigns" &&
-        view !== "review" &&
-        view !== "calendar" ? (
-          <ComingSoon label={viewLabel(view)} />
-        ) : null}
+        {view === "results" ? <ResultsView /> : null}
+        {view === "avatars" ? <AvatarsView /> : null}
       </div>
     </main>
   );
 }
 
-function viewLabel(key: ViewKey): string {
-  return VIEWS.find((v) => v.key === key)?.label ?? key;
-}
 
-function ComingSoon({ label }: { label: string }) {
-  return (
-    <div className="rounded-xl border border-brand-border bg-brand-bg-card p-6">
-      <p className="text-sm text-brand-text-secondary">
-        {label} is not built yet. Trends is the first view: add accounts to the
-        watchlist and record what they are posting, and the ranking below will
-        show which posts are outperforming their own account baseline.
-      </p>
-    </div>
-  );
-}

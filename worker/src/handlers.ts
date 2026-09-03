@@ -317,7 +317,128 @@ const handlePublish: Handler = async (job, ctx) => {
 };
 
 const handleRender: Handler = async () => notImplemented("render");
-const handleSyncMetrics: Handler = async () => notImplemented("sync_metrics");
+
+/**
+ * Pulls the latest owned-account metrics for published posts.
+ *
+ * Fields a platform does not return stay null rather than 0: TikTok's standard
+ * authorized video data has no reach or saves, and recording 0 would make an
+ * absent metric look like a measured one in Results.
+ */
+const handleSyncMetrics: Handler = async (job, ctx) => {
+  const { readTokens, markNeedsReconnect } = await import(
+    "../../lib/db/content/tokens.js"
+  );
+
+  const due = await query<{
+    id: number;
+    account_id: number;
+    platform: string;
+    platform_post_id: string;
+    platform_account_id: string | null;
+  }>(
+    `SELECT p.id, p.account_id, a.platform, p.platform_post_id, a.platform_account_id
+     FROM publications p
+     JOIN social_accounts a ON a.id = p.account_id
+     WHERE p.status = 'published'
+       AND p.platform_post_id IS NOT NULL
+       AND a.needs_reconnect = false
+       AND p.published_at >= now() - interval '30 days'
+     ORDER BY p.published_at DESC
+     LIMIT 50`,
+  );
+
+  let synced = 0;
+
+  for (const pub of due.rows) {
+    const tokens = await readTokens(pub.account_id);
+    if (!tokens) {
+      await markNeedsReconnect(pub.account_id);
+      continue;
+    }
+
+    try {
+      if (pub.platform === "instagram") {
+        const res = await fetch(
+          `https://graph.facebook.com/v21.0/${pub.platform_post_id}/insights` +
+            `?metric=views,reach,likes,comments,shares,saved,follows,profile_visits` +
+            `&access_token=${encodeURIComponent(tokens.accessToken)}`,
+        );
+        const json = (await res.json()) as {
+          data?: Array<{ name: string; values?: Array<{ value?: number }> }>;
+          error?: { message?: string };
+        };
+        if (json.error) throw new Error(json.error.message ?? "instagram insights failed");
+
+        const by = new Map(
+          (json.data ?? []).map((m) => [m.name, m.values?.[0]?.value ?? null]),
+        );
+        await query(
+          `INSERT INTO publication_metrics
+             (publication_id, views, reach, likes, comments, shares, saves,
+              follows, profile_visits, source)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'instagram_insights')`,
+          [
+            pub.id,
+            by.get("views") ?? null,
+            by.get("reach") ?? null,
+            by.get("likes") ?? null,
+            by.get("comments") ?? null,
+            by.get("shares") ?? null,
+            by.get("saved") ?? null,
+            by.get("follows") ?? null,
+            by.get("profile_visits") ?? null,
+          ],
+        );
+        synced += 1;
+      } else {
+        const res = await fetch(
+          "https://open.tiktokapis.com/v2/video/query/?fields=id,view_count,like_count,comment_count,share_count",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${tokens.accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              filters: { video_ids: [pub.platform_post_id] },
+            }),
+          },
+        );
+        const json = (await res.json()) as {
+          data?: { videos?: Array<Record<string, number>> };
+          error?: { code?: string; message?: string };
+        };
+        if (json.error?.code && json.error.code !== "ok") {
+          throw new Error(json.error.message ?? "tiktok query failed");
+        }
+        const v = json.data?.videos?.[0];
+        if (v) {
+          // reach, saves, follows and profile_visits are absent from TikTok's
+          // standard video data, so they stay null.
+          await query(
+            `INSERT INTO publication_metrics
+               (publication_id, views, likes, comments, shares, source)
+             VALUES ($1,$2,$3,$4,$5,'tiktok_api')`,
+            [pub.id, v.view_count ?? null, v.like_count ?? null,
+             v.comment_count ?? null, v.share_count ?? null],
+          );
+          synced += 1;
+        }
+      }
+    } catch (err) {
+      // One post's failure must not abandon the rest of the sync.
+      ctx.log(
+        `metrics sync failed for publication ${pub.id}: ` +
+          `${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  ctx.log(`synced metrics for ${synced}/${due.rows.length} publication(s)`);
+  void job;
+  return 0;
+};
 const handleCollectPublic: Handler = async () => notImplemented("collect_public");
 const handleConcept: Handler = async () => notImplemented("concept");
 

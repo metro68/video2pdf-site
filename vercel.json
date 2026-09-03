@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/content-scheduler",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/content-metrics",
+      "schedule": "30 */6 * * *"
     }
   ]
 }
