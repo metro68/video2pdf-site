@@ -4,6 +4,8 @@ import { useState } from "react";
 import DashboardTabs from "@/app/dashboard/components/DashboardTabs";
 import TrendsView from "./TrendsView";
 import CampaignsView from "./CampaignsView";
+import ReviewView from "./ReviewView";
+import CalendarView from "./CalendarView";
 
 // The content engine's six views live inside the Content tab rather than as
 // six more top-level dashboard tabs, so the dashboard's own tab strip stays
@@ -62,7 +64,12 @@ export default function ContentClient() {
 
         {view === "trends" ? <TrendsView /> : null}
         {view === "campaigns" ? <CampaignsView /> : null}
-        {view !== "trends" && view !== "campaigns" ? (
+        {view === "review" ? <ReviewView /> : null}
+        {view === "calendar" ? <CalendarView /> : null}
+        {view !== "trends" &&
+        view !== "campaigns" &&
+        view !== "review" &&
+        view !== "calendar" ? (
           <ComingSoon label={viewLabel(view)} />
         ) : null}
       </div>

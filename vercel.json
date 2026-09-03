@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/abandoned-emails",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/content-scheduler",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
