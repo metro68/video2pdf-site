@@ -1,0 +1,19 @@
+# Fly.io deployment for the content worker.
+#
+# No [http_service] block: the worker has no inbound surface. It polls Postgres
+# and makes outbound API calls only.
+
+app = "video2pdf-content-worker"
+primary_region = "lhr"
+
+[build]
+  dockerfile = "../Dockerfile.worker"
+
+[env]
+  # Dry run stays on until a live post has been explicitly authorised.
+  WORKER_DRY_RUN = "1"
+  WORKER_IDLE_MS = "5000"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"

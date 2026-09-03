@@ -1,0 +1,22 @@
+{
+  "name": "video2pdf-content-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Long-running generation, rendering, publishing and analytics jobs for the UGC content engine. Runs outside Vercel: renders exceed request-time function limits.",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "pg": "^8.22.0",
+    "sharp": "^0.34.5",
+    "tsx": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.20.0",
+    "typescript": "^5.7.2"
+  }
+}
