@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { TrendsPayload } from "@/lib/content/trends";
 import AddAccountForm from "./AddAccountForm";
 import RecordReadingForm from "./RecordReadingForm";
+import SaveConceptButton from "./SaveConceptButton";
 
 interface TrendsResponse {
   status: "ok" | "error";
@@ -190,6 +191,7 @@ export default function TrendsView() {
                   <th className="px-4 py-2 text-right font-medium">Views/follower</th>
                   <th className="px-4 py-2 text-right font-medium">Engagement</th>
                   <th className="px-4 py-2 font-medium">Basis</th>
+                  <th className="px-4 py-2" />
                 </tr>
               </thead>
               <tbody>
@@ -222,6 +224,9 @@ export default function TrendsView() {
                       {r.baselineBasis
                         ? `${r.baselineBasis}, n=${r.baselineSampleSize}`
                         : "no baseline"}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <SaveConceptButton post={r.post} />
                     </td>
                   </tr>
                 ))}
