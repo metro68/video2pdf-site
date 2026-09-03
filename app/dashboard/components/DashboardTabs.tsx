@@ -5,11 +5,12 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/ads", label: "Ads eval" },
+  { href: "/dashboard/content", label: "Content" },
 ] as const;
 
-// Segmented view switcher shown on every dashboard page, so Overview and
-// Ads eval read as two views of one dashboard rather than separate pages.
-// Both views are available to every dashboard role.
+// Segmented view switcher shown on every dashboard page, so Overview, Ads eval
+// and Content read as views of one dashboard rather than separate pages.
+// Every view is available to every dashboard role.
 export default function DashboardTabs() {
   const pathname = usePathname();
   return (
