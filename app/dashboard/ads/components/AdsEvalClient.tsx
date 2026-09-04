@@ -5,7 +5,7 @@ import type { AdsEvalPayload } from "@/lib/ads/assemble";
 import { deriveEconomics, isModeling } from "@/lib/ads/economics";
 import type { AdsAssumptions } from "@/lib/ads/config";
 import KpiTile from "@/app/dashboard/components/KpiTile";
-import DashboardTabs from "@/app/dashboard/components/DashboardTabs";
+import DashboardHeader from "@/app/dashboard/components/DashboardHeader";
 import VerdictBanner from "./VerdictBanner";
 import AssumptionsPanel from "./AssumptionsPanel";
 import CohortChart from "./CohortChart";
@@ -65,7 +65,7 @@ export default function AdsEvalClient() {
     return (
       <main className="min-h-screen bg-brand-bg text-brand-text p-6">
         <div className="mx-auto max-w-6xl space-y-6">
-          <DashboardTabs />
+          <DashboardHeader />
           <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4">
             <p className="text-sm text-red-500">
               Could not load ads data. Check your connection and try again.
@@ -87,7 +87,7 @@ export default function AdsEvalClient() {
     return (
       <main className="min-h-screen bg-brand-bg text-brand-text p-6">
         <div className="mx-auto max-w-6xl space-y-6">
-          <DashboardTabs />
+          <DashboardHeader />
           <p className="text-sm text-brand-text-secondary">Loading ads eval&hellip;</p>
         </div>
       </main>
@@ -146,7 +146,7 @@ export default function AdsEvalClient() {
           </div>
         </header>
 
-        <DashboardTabs />
+        <DashboardHeader />
 
         <VerdictBanner
           economics={economics}

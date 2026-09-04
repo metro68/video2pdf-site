@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import DashboardTabs from "@/app/dashboard/components/DashboardTabs";
+import DashboardHeader from "@/app/dashboard/components/DashboardHeader";
 import TrendsView from "./TrendsView";
 import CampaignsView from "./CampaignsView";
 import ReviewView from "./ReviewView";
@@ -30,7 +30,7 @@ export default function ContentClient() {
   return (
     <main className="min-h-screen bg-brand-bg p-6 text-brand-text">
       <div className="mx-auto max-w-6xl space-y-6">
-        <DashboardTabs />
+        <DashboardHeader />
 
         <div>
           <h1 className="text-xl font-semibold">Content engine</h1>

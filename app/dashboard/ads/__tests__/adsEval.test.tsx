@@ -10,6 +10,13 @@ import { deriveEconomics } from "@/lib/ads/economics";
 import { assemblePayload } from "@/lib/ads/assemble";
 import type { TrialCohort } from "@/lib/connectors/stripe";
 
+// AdsEvalClient renders DashboardHeader, which calls useRouter for sign out.
+// jsdom has no mounted app router, so both navigation hooks are stubbed here.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => "/dashboard/ads",
+}));
+
 const COHORT = { trials: 20, decided: 15, payers: 8, canceled: 7, pastDue: 0, pending: 5, collectedUsd: 239.92 };
 const FACTS = { spendGbp: 200, stripeTrials: 20, appTrials: 0, trialsLast7: 12, cohort: COHORT };
 
