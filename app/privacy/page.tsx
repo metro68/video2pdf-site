@@ -61,7 +61,7 @@ export default function PrivacyPage() {
       <div className="container legal">
         <Link className="back" href="/">
           <img
-            src="/assets/icon.png"
+            src="/assets/icon-192.png"
             alt=""
             style={{ width: 24, height: 24, borderRadius: 6, verticalAlign: "middle", marginRight: 8 }}
           />

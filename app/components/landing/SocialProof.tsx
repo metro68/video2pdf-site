@@ -3,6 +3,7 @@
 import { useInView, useReducedMotion } from "framer-motion";
 import { Star } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { APP_STORE_URL } from "@/lib/seo/jsonld";
 import { Reveal } from "./Reveal";
 
 const testimonials = [
@@ -30,7 +31,8 @@ function Counter({ target }: { target: number }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
   const reduce = useReducedMotion();
-  const [value, setValue] = useState(0);
+  // Server-render the full value: crawlers that don't run JS must never see 0.
+  const [value, setValue] = useState(target);
 
   useEffect(() => {
     if (!inView) return;
@@ -67,7 +69,14 @@ export function SocialProof() {
             ))}
           </div>
           <p className="text-lg font-semibold">
-            Rated 5 stars on the App Store
+            <a
+              href={APP_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-primary-light"
+            >
+              Rated 5 stars on the App Store
+            </a>
           </p>
           <p className="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">
             <span className="bg-gradient-to-r from-primary-light to-primary bg-clip-text text-transparent">

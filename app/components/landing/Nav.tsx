@@ -33,8 +33,10 @@ export function Nav() {
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5">
           <img
-            src="/assets/icon.png"
+            src="/assets/icon-192.png"
             alt="Video2PDF logo"
+            width={32}
+            height={32}
             className="size-8 rounded-lg object-cover shadow-md shadow-black/30"
           />
           <span className="text-lg font-bold tracking-tight text-foreground">

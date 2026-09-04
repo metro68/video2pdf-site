@@ -1,0 +1,33 @@
+# Video2PDF
+
+> Video2PDF is a mobile app for iPhone and Android that turns a handheld video of a physical book, notebook, or handout into a clean, searchable PDF. Full-resolution videos, page images, and PDFs stay on the user's device.
+
+## Pages
+
+- [Home](https://www.video2pdf.ai/): Product overview. Film pages in one continuous video and get a straightened, OCR-searchable PDF in seconds. Covers the three-step workflow, the six core features (smart page detection, hand avoidance, perspective correction, adaptive enhancement, searchable OCR text, private by design), pricing, and an FAQ.
+- [Start Free Trial](https://www.video2pdf.ai/go): Web checkout for Video2PDF Pro. 3-day free trial, then $29.99 per year with the price locked for life.
+- [Manage Subscription](https://www.video2pdf.ai/manage): Self-service portal to update or cancel a Video2PDF Pro subscription purchased on the web.
+
+## Legal
+
+- [Privacy Policy](https://www.video2pdf.ai/privacy): How Video2PDF handles data. Cleanup, enhancement, and text recognition run on-device; reduced-resolution copies of sampled frames are sent to Video2PDF's servers for page detection and ordering, then deleted, and are never used to train AI models. Full-resolution videos, page images, and PDFs stay on the device.
+- [Terms of Service](https://www.video2pdf.ai/terms): Subscription terms, free trial and cancellation policy, and acceptable use.
+- [Delete Your Data](https://www.video2pdf.ai/delete-account): How to delete data associated with Video2PDF.
+
+## Key Facts
+
+- Product: Video2PDF, a consumer mobile app for iPhone and Android by Kaelor Ltd, at video2pdf.ai
+- What it does: converts one continuous handheld video of book or notebook pages into a straightened, enhanced, fully searchable PDF, with no tripod and no page-by-page capture
+- How it works: the app detects the moment each page settles, skips frames containing fingers, picks the sharpest frame, corrects perspective, enhances contrast, and runs OCR on every page
+- Privacy model: full-resolution videos, page images, and PDFs never leave the phone; cleanup, enhancement, and OCR run on-device; only reduced-resolution copies of sampled frames go to Video2PDF's servers for page detection and ordering, then are deleted; no account or sign-up required
+- Pricing: Video2PDF Pro costs $29.99 per year after a 3-day free trial; unlimited scans, no watermarks; a weekly plan at $4.99 per week is also available
+- Difference from scanner apps: unlike page-at-a-time scanner apps (CamScanner, vFlat, Adobe Scan), Video2PDF captures pages from continuous video while you flip through the book
+- App Store: https://apps.apple.com/app/video2pdf/id6761927204
+- Google Play: https://play.google.com/store/apps/details?id=com.vid2pdf.app
+- Not affiliated with: video2pdf.com, the video2pdf packages on PyPI or GitHub (video-slides-to-PDF converters), or "Video to PDF Converter AI" transcription apps
+- Typical users: students digitizing textbooks and lecture notes, teachers capturing worksheets, researchers archiving printed material
+
+## Contact
+
+- Website: https://www.video2pdf.ai
+- Support: support@video2pdf.ai
