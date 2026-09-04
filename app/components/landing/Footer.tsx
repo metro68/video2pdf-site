@@ -23,6 +23,12 @@ export function Footer() {
         </Link>
 
         <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
+          <a href="/how-to-scan-a-book" className="transition-colors hover:text-foreground">
+            How to Scan a Book
+          </a>
+          <a href="/about" className="transition-colors hover:text-foreground">
+            About
+          </a>
           <TrackedLink
             href="/manage"
             event="cta_manage_clicked"
