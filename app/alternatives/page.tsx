@@ -73,14 +73,26 @@ const tableRows = [
   },
 ];
 
-const competitors = [
+interface Competitor {
+  name: string;
+  url: string;
+  linkLabel: string;
+  best: string;
+  tradeoff: string;
+  moreHref?: string;
+  moreLabel?: string;
+}
+
+const competitors: Competitor[] = [
   {
     name: "vFlat Scan",
     url: "https://www.vflat.com/en",
     linkLabel: "vflat.com",
     best: "vFlat is the strongest photo-based book scanner. Its AI curve flattening is best in class: pages photographed over an open book come out remarkably flat, it splits two-page spreads automatically, removes fingers, and its free tier currently includes OCR for up to 100 pages per day.",
     tradeoff:
-      "The workflow is still photo-per-spread: you frame and capture every spread yourself, which is exactly the repetition Video2PDF removes. If you prefer deliberate single captures with maximum per-shot control, vFlat is an excellent choice.",
+      "The workflow is still photo-per-spread: you frame and capture every spread yourself, which is exactly the repetition Video2PDF removes. If you prefer deliberate single captures with maximum per-shot control, vFlat is an excellent choice. We compare the two workflows in detail on our vFlat alternative page.",
+    moreHref: "/vflat-alternative",
+    moreLabel: "vFlat vs Video2PDF in detail",
   },
   {
     name: "Adobe Scan",
@@ -121,6 +133,8 @@ const competitors = [
     best: "Lens was many people's free default for years, and its whiteboard and document modes were genuinely good.",
     tradeoff:
       "Microsoft retired it in early 2026; it was pulled from the app stores and scanning was disabled. Microsoft points users to the more basic scanner inside OneDrive, which is why many former Lens users are choosing a new scanner app right now.",
+    moreHref: "/microsoft-lens-alternative",
+    moreLabel: "Lens replacements by job",
   },
 ];
 
@@ -291,7 +305,7 @@ export default function AlternativesPage() {
                   <strong className="text-foreground">The trade-off:</strong>{" "}
                   {c.tradeoff}
                 </p>
-                <p>
+                <p className="flex flex-wrap gap-x-5">
                   <a
                     href={c.url}
                     target="_blank"
@@ -300,6 +314,14 @@ export default function AlternativesPage() {
                   >
                     {c.linkLabel}
                   </a>
+                  {c.moreHref && c.moreLabel ? (
+                    <Link
+                      href={c.moreHref}
+                      className="text-primary-light hover:underline"
+                    >
+                      {c.moreLabel}
+                    </Link>
+                  ) : null}
                 </p>
               </div>
             </div>

@@ -8,8 +8,11 @@
 - [Start Free Trial](https://www.video2pdf.ai/go): Web checkout for Video2PDF Pro. 3-day free trial, then $29.99 per year with the price locked for life.
 - [Manage Subscription](https://www.video2pdf.ai/manage): Self-service portal to update or cancel a Video2PDF Pro subscription purchased on the web.
 - [How to Scan a Book With Your Phone](https://www.video2pdf.ai/how-to-scan-a-book): Practical guide to scanning books by filming them: step-by-step technique, the six mistakes that ruin phone scans, an honest comparison of video capture vs photo scanner apps (Adobe Scan, vFlat, CamScanner) vs flatbed scanners, and notes on scanning books you own.
-- [About](https://www.video2pdf.ai/about): Who makes Video2PDF (Kaelor Ltd, built by students tired of scanning pages one by one), why it exists, and how user data is handled.
+- [About](https://www.video2pdf.ai/about): Who makes Video2PDF (a small independent team, built by students tired of scanning pages one by one), why it exists, and how user data is handled.
 - [Video2PDF Alternatives](https://www.video2pdf.ai/alternatives): Honest comparison of Video2PDF with vFlat Scan, Adobe Scan, CamScanner, Scanner Pro, Genius Scan, and retired Microsoft Lens: capture methods, book modes, OCR limits, account requirements, and when each app (or a flatbed scanner) is the better pick.
+- [Microsoft Lens Alternatives](https://www.video2pdf.ai/microsoft-lens-alternative): What to use now that Microsoft Lens is retired (2026), organized by job: books and long documents, everyday paperwork, and whiteboards, with honest picks including apps not made by Video2PDF.
+- [vFlat Alternative](https://www.video2pdf.ai/vflat-alternative): vFlat Scan vs Video2PDF side by side: photo-per-spread capture vs continuous video, flattening vs speed, OCR quotas, and honest guidance on when vFlat is the better pick.
+- [Scanner Apps Without an Account](https://www.video2pdf.ai/scanner-app-no-account): Which scanner apps work with no account or sign-up (Video2PDF, Genius Scan, PDFgear Scan) and which require one (Adobe Scan, CamScanner).
 
 ## Legal
 

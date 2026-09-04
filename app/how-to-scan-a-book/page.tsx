@@ -248,6 +248,24 @@ export default function HowToScanABookPage() {
         </div>
 
         <h2 className="mt-12 text-2xl font-bold tracking-tight text-foreground">
+          What is video book scanning?
+        </h2>
+        <div className="mt-4 space-y-5 text-pretty leading-relaxed text-muted-foreground">
+          <p>
+            Video book scanning means converting one continuous video of a
+            book&apos;s pages being turned into a page-accurate, searchable
+            PDF. Software analyzes the footage, detects the moment each page
+            settles, discards blurred and finger-covered frames, keeps the
+            sharpest frame of every page, straightens and enhances it, and
+            runs OCR. It is not the same as &quot;video to PDF&quot; frame
+            extraction, which just exports evenly spaced screenshots from a
+            video; frame extractors do not know what a page is, so they
+            produce duplicates, blur, and missed pages when pointed at a
+            book.
+          </p>
+        </div>
+
+        <h2 className="mt-12 text-2xl font-bold tracking-tight text-foreground">
           Step by step: film your book, get a PDF
         </h2>
         <ol className="mt-5 space-y-4">
@@ -314,6 +332,45 @@ export default function HowToScanABookPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        <h2 className="mt-12 text-2xl font-bold tracking-tight text-foreground">
+          How do you scan a textbook without a scanner?
+        </h2>
+        <div className="mt-4 space-y-5 text-pretty leading-relaxed text-muted-foreground">
+          <p>
+            You do not need a scanner; your phone camera is enough. For a
+            whole textbook, filming is the practical route: record one video
+            per chapter while flipping, and let the app extract the pages.
+            For just a few pages, any photo scanner app works too. Either
+            way you end up with a searchable PDF without buying hardware,
+            and without the library scanner queue before exams. If sign-up
+            friction bothers you, see which{" "}
+            <Link
+              href="/scanner-app-no-account"
+              className="text-primary-light hover:underline"
+            >
+              scanner apps work without an account
+            </Link>
+            .
+          </p>
+        </div>
+
+        <h2 className="mt-12 text-2xl font-bold tracking-tight text-foreground">
+          How do you scan a book without damaging it?
+        </h2>
+        <div className="mt-4 space-y-5 text-pretty leading-relaxed text-muted-foreground">
+          <p>
+            The main way books get damaged during scanning is pressure:
+            flattening the spine against flatbed glass or cracking it open
+            to 180 degrees for a cleaner photo. Filming avoids the problem,
+            because the book only needs to be opened as far as comfortable
+            reading. Hold pages lightly at the edges, let each spread rest
+            at its natural angle, and let perspective correction handle the
+            geometry. For rare or fragile books where every handling counts,
+            a professional overhead book scanner is still the careful
+            choice.
+          </p>
         </div>
 
         <h2 className="mt-12 text-2xl font-bold tracking-tight text-foreground">

@@ -30,6 +30,14 @@ export function Nav() {
           : "border-b border-transparent"
       }`}
     >
+      <TrackedLink
+        href="/go"
+        event="cta_start_trial_clicked"
+        params={{ location: "deal_banner" }}
+        className="block bg-primary px-4 py-2 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary-hover sm:text-sm"
+      >
+        Summer deal: lock in $29.99/year for life · 3 days free · Claim it →
+      </TrackedLink>
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5">
           <img

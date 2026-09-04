@@ -73,9 +73,7 @@ export function Footer() {
           </a>
         </nav>
 
-        <p className="text-xs text-muted-foreground">
-          © 2026 Kaelor Ltd. Video2PDF is made by Kaelor Ltd. All rights reserved.
-        </p>
+        <p className="text-xs text-muted-foreground">© 2026 Kaelor Ltd. All rights reserved.</p>
       </div>
     </footer>
   );

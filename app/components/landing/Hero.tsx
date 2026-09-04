@@ -17,7 +17,7 @@ const bottomStagger: Variants = {
 
 export function Hero() {
   return (
-    <section className="bg-grid relative overflow-hidden pt-28 pb-16 sm:pt-32">
+    <section className="bg-grid relative overflow-hidden pt-36 pb-16 sm:pt-40">
       <div className="pointer-events-none absolute -top-32 left-1/2 h-96 w-[42rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
 
       {/* On phones the demo sits directly under the headline so it is in view
@@ -73,7 +73,7 @@ export function Hero() {
 
           <motion.div
             variants={staggerItem}
-            className="mt-8 flex flex-col items-center gap-3 sm:flex-row lg:items-start lg:justify-start"
+            className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start"
           >
             <TrackedLink
               href="/go"

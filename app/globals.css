@@ -62,7 +62,8 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 5rem;
+  /* Clears the fixed header: deal banner plus the 4rem nav bar. */
+  scroll-padding-top: 7rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

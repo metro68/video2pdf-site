@@ -7,9 +7,9 @@ import { APP_STORE_URL, PLAY_STORE_URL, SITE_URL } from "@/lib/seo/jsonld";
 const PAGE_URL = `${SITE_URL}/about`;
 
 export const metadata: Metadata = {
-  title: "About Video2PDF | Kaelor Ltd",
+  title: "About Video2PDF",
   description:
-    "Video2PDF is built by Kaelor Ltd: a small independent team making the fastest way to turn physical books, notes, and handouts into searchable PDFs with a phone.",
+    "Video2PDF was built by students tired of scanning pages one by one: a small independent team making the fastest way to turn books, notes, and handouts into searchable PDFs with a phone.",
 };
 
 const jsonLd = {
@@ -83,11 +83,9 @@ export default function AboutPage() {
         </h2>
         <div className="mt-4 space-y-5 text-pretty leading-relaxed text-muted-foreground">
           <p>
-            Video2PDF is built by{" "}
-            <strong className="text-foreground">Kaelor Ltd</strong>, a small
-            independent software company started by students who were tired
-            of scanning each page one by one. There is no growth team and no
-            sales department; the people who answer{" "}
+            A small independent team that started as students with a stack of
+            textbooks and no scanner. There is no growth team and no sales
+            department; the people who answer{" "}
             <a
               href="mailto:support@video2pdf.ai"
               className="text-primary-light hover:underline"
