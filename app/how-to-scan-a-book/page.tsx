@@ -285,7 +285,11 @@ export default function HowToScanABookPage() {
           preservation of a rare book, a flatbed scanner still wins and we
           will tell you so. For turning the books and notes you actually
           study from into searchable PDFs quickly, filming wins on effort by
-          a wide margin.
+          a wide margin. For an app-by-app breakdown, see our{" "}
+          <Link href="/alternatives" className="text-primary-light hover:underline">
+            comparison of book scanner apps
+          </Link>
+          .
         </p>
         <div className="mt-5 overflow-x-auto rounded-2xl border border-border">
           <table className="w-full min-w-[640px] text-left text-sm">

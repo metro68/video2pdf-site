@@ -69,9 +69,12 @@ export default function AboutPage() {
             makes every word searchable.
           </p>
           <p>
-            It exists because retyping notes and photographing textbook pages
-            one by one is miserable, and most people give up halfway through
-            a chapter. Filming is the capture method people actually finish.
+            It started as a student problem. We were digitizing textbooks and
+            lecture notes with the usual scanner apps, photographing pages one
+            at a time, reframing every shot, and giving up halfway through a
+            chapter. Filming felt like the obvious capture method, but no app
+            could turn a video of page flips into a usable PDF. So we built
+            the one that could.
           </p>
         </div>
 
@@ -82,7 +85,8 @@ export default function AboutPage() {
           <p>
             Video2PDF is built by{" "}
             <strong className="text-foreground">Kaelor Ltd</strong>, a small
-            independent software company. There is no growth team and no
+            independent software company started by students who were tired
+            of scanning each page one by one. There is no growth team and no
             sales department; the people who answer{" "}
             <a
               href="mailto:support@video2pdf.ai"

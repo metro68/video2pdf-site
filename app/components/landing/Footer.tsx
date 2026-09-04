@@ -26,6 +26,9 @@ export function Footer() {
           <a href="/how-to-scan-a-book" className="transition-colors hover:text-foreground">
             How to Scan a Book
           </a>
+          <a href="/alternatives" className="transition-colors hover:text-foreground">
+            Compare Apps
+          </a>
           <a href="/about" className="transition-colors hover:text-foreground">
             About
           </a>
