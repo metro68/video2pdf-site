@@ -93,9 +93,13 @@ export default function PrivacyPage() {
             does not identify you.
           </li>
           <li>
-            <strong>Video &amp; Image Data:</strong> When you record a video, all frame extraction,
-            image enhancement, and PDF generation happen on your device. Scan videos, page images,
-            and generated PDFs are not uploaded to our servers as part of normal processing.
+            <strong>Video &amp; Image Data:</strong> When you record a video, frame extraction,
+            image enhancement, and PDF generation happen on your device. To detect which frames are
+            book pages and put them in the right order, reduced-resolution copies of sampled frames
+            are securely uploaded to our servers and analyzed by an AI service (OpenAI). These
+            copies are used only for that analysis, are not used to train AI models under our
+            agreement with the provider, and are deleted after processing. Your full-resolution
+            video, final page images, and generated PDFs stay on your device.
           </li>
           <li>
             <strong>Subscription Data:</strong> We process subscription transactions through Apple
@@ -131,9 +135,11 @@ export default function PrivacyPage() {
         <h2>3. Data Storage &amp; Security</h2>
         <ul>
           <li>
-            <strong>On-Device Processing:</strong> Image processing happens locally on your device.
-            Your videos, extracted pages, and generated PDFs are stored only on your device unless
-            you explicitly export or share them.
+            <strong>Processing:</strong> Image enhancement and PDF generation happen locally on
+            your device. Reduced-resolution copies of sampled frames are sent to our servers solely
+            for page detection and ordering, then deleted. Your full-resolution videos, final page
+            images, and generated PDFs are stored only on your device unless you explicitly export
+            or share them.
           </li>
           <li>
             We do not sell your personal information for money. To measure and optimize our
@@ -156,6 +162,7 @@ export default function PrivacyPage() {
             campaigns
           </li>
           <li>TikTok: advertising attribution and measurement for TikTok campaigns (via AppsFlyer)</li>
+          <li>OpenAI: AI analysis of reduced-resolution page frames for page detection and ordering</li>
           <li>
             Backend infrastructure providers: subscription validation and operational reliability
           </li>
