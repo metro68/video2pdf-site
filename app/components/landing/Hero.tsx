@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, type Variants } from "framer-motion";
-import { Apple, Smartphone, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { TrackedLink } from "@/app/components/TrackedLink";
 import { ProductDemo } from "./ProductDemo";
 import { staggerContainer, staggerItem } from "./Reveal";
@@ -85,9 +85,7 @@ export function Hero() {
               Start Free Trial
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
             </TrackedLink>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Apple className="size-4" aria-hidden="true" />
-              <Smartphone className="size-4" aria-hidden="true" />
+            <div className="flex items-center text-sm text-muted-foreground">
               Free on iPhone and Android
             </div>
           </motion.div>
