@@ -91,7 +91,7 @@ export function Hero() {
           </motion.div>
 
           <motion.p variants={staggerItem} className="mt-4 text-sm text-muted-foreground">
-            Summer deal: lock in $29.99/year for life. 3 days free, cancel anytime before the trial
+            Back to school deal: lock in $29.99/year for life. 3 days free, cancel anytime before the trial
             ends and you won&apos;t be charged.
           </motion.p>
         </motion.div>

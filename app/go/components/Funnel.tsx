@@ -261,7 +261,7 @@ export function Funnel() {
       </ul>
       <div className="mt-6 w-full rounded-lg border border-brand-primary/60 bg-brand-primary/10 p-4 text-center">
         <span className="inline-block rounded-full bg-brand-primary px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
-          Summer deal
+          Back to school deal
         </span>
         <p className="mt-2 text-xl font-bold">
           <s className="mr-2 font-normal text-brand-text-secondary">

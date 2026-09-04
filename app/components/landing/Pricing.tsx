@@ -22,10 +22,10 @@ export function Pricing() {
         <Reveal className="mx-auto max-w-2xl text-center">
           <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-primary-light">Pricing</p>
           <h2 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
-            Summer deal: lock in your price for life
+            Back to school deal: lock in your price for life
           </h2>
           <p className="mt-4 text-pretty text-muted-foreground">
-            Subscribe this summer and $29.99/year is your price forever. It never increases on you,
+            Subscribe this school year and $29.99/year is your price forever. It never increases on you,
             even as we add features.
           </p>
         </Reveal>
