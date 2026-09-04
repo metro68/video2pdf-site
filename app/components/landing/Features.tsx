@@ -32,8 +32,8 @@ const features = [
   },
   {
     icon: ShieldCheck,
-    title: "On-Device Privacy",
-    body: "All processing happens on your phone. No account, no cloud, nothing ever leaves your device.",
+    title: "Private by Design",
+    body: "Your video, page images, and PDFs stay on your phone. Only low-resolution copies of sampled frames go to our servers to find and order pages, then they're deleted. No account required.",
   },
 ];
 

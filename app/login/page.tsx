@@ -34,7 +34,7 @@ export default function LoginPage() {
         className="w-full max-w-sm bg-brand-bg-card border border-brand-border rounded-xl p-6 space-y-4"
       >
         <div className="flex flex-col items-center gap-2">
-          <img src="/assets/icon.png" alt="Video2PDF" className="h-14 w-14 rounded-xl" />
+          <img src="/assets/icon-192.png" alt="Video2PDF" className="h-14 w-14 rounded-xl" />
           <h1 className="text-xl font-bold text-brand-primary">Video2PDF Dashboard</h1>
         </div>
         <input

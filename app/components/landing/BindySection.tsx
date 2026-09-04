@@ -5,9 +5,9 @@ import { WifiOff, UserX, Lock } from "lucide-react";
 import { Reveal } from "./Reveal";
 
 const points = [
-  { icon: WifiOff, label: "Nothing is uploaded, works fully offline" },
+  { icon: WifiOff, label: "Full-resolution scans never leave your phone" },
   { icon: UserX, label: "No account and no sign-up required" },
-  { icon: Lock, label: "Your books and notes stay on your device" },
+  { icon: Lock, label: "Page-detection frames are deleted after processing" },
 ];
 
 export function BindySection() {
@@ -22,9 +22,10 @@ export function BindySection() {
             Your bookworm reads along, privately
           </h2>
           <p className="mt-4 text-pretty leading-relaxed text-muted-foreground">
-            Bindy is the friendly bookworm powering Video2PDF. Everything Bindy does happens right
-            on your phone: page detection, cleanup, and text recognition all run on-device. No
-            accounts, no uploads, no servers peeking at your notes.
+            Bindy is the friendly bookworm powering Video2PDF. Your video, page images, and
+            finished PDFs stay on your phone: cleanup, enhancement, and text recognition all run
+            on-device. Only reduced-resolution copies of sampled frames go to our servers to find
+            and order your pages, and they're deleted right after. No accounts, ever.
           </p>
 
           <ul className="mt-6 space-y-3">

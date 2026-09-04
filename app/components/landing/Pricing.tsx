@@ -10,7 +10,7 @@ const perks = [
   "Full-resolution, straightened pages",
   "Searchable, copy-pasteable text",
   "No watermarks, ever",
-  "On-device processing, fully private",
+  "Private by design, no account required",
 ];
 
 export function Pricing() {

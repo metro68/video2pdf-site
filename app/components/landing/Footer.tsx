@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { TrackedLink } from "@/app/components/TrackedLink";
+import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/seo/jsonld";
 
 export function Footer() {
   return (
@@ -10,8 +11,10 @@ export function Footer() {
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 text-center sm:px-6">
         <Link href="/" className="flex items-center gap-2.5">
           <img
-            src="/assets/icon.png"
+            src="/assets/icon-192.png"
             alt="Video2PDF logo"
+            width={32}
+            height={32}
             className="size-8 rounded-lg object-cover"
           />
           <span className="text-lg font-bold tracking-tight text-foreground">
@@ -42,7 +45,28 @@ export function Footer() {
           </a>
         </nav>
 
-        <p className="text-xs text-muted-foreground">© 2026 Video2PDF. All rights reserved.</p>
+        <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
+          <a
+            href={APP_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-foreground"
+          >
+            Download on the App Store
+          </a>
+          <a
+            href={PLAY_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-foreground"
+          >
+            Get it on Google Play
+          </a>
+        </nav>
+
+        <p className="text-xs text-muted-foreground">
+          © 2026 Kaelor Ltd. Video2PDF is made by Kaelor Ltd. All rights reserved.
+        </p>
       </div>
     </footer>
   );

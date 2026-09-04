@@ -35,18 +35,17 @@ export function Hero() {
             className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground lg:mx-0"
           >
             <span className="size-1.5 rounded-full bg-primary-light" />
-            On-device AI, nothing uploaded
+            Private by design, no account required
           </motion.div>
 
-          <motion.h1
-            variants={staggerItem}
-            className="text-balance text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl"
-          >
+          {/* Plain h1 with a CSS entrance: the LCP element must be visible in
+              server HTML instead of waiting for hydration like the motion nodes. */}
+          <h1 className="hero-enter text-balance text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
             Film any book.{" "}
             <span className="bg-gradient-to-r from-primary via-primary-light to-primary-light bg-clip-text text-transparent">
               Get a searchable PDF.
             </span>
-          </motion.h1>
+          </h1>
         </motion.div>
 
         <motion.div
