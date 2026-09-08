@@ -5,7 +5,7 @@ import { resolveMonthWindow } from "@/lib/month";
 
 const CACHE_KEY = "connector:posthog";
 
-function hasCredentials(): boolean {
+export function hasCredentials(): boolean {
   return Boolean(process.env.POSTHOG_API_KEY && process.env.POSTHOG_HOST && process.env.POSTHOG_PROJECT_ID);
 }
 

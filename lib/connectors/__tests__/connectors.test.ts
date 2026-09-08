@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { clearCache } from "@/lib/cache";
 import * as appstore from "@/lib/connectors/appstore";
 import * as posthog from "@/lib/connectors/posthog";
+import * as cost from "@/lib/connectors/cost";
 import * as meta from "@/lib/connectors/meta";
 
 const ALL_ENV = [
@@ -29,6 +30,11 @@ describe("connectors: awaiting-credentials path", () => {
 
   it("posthog returns awaiting_credentials with no keys", async () => {
     const r = await posthog.fetchMetrics();
+    expect(r.status).toBe("awaiting_credentials");
+  });
+
+  it("cost returns awaiting_credentials without PostHog keys", async () => {
+    const r = await cost.fetchMetrics();
     expect(r.status).toBe("awaiting_credentials");
   });
 });

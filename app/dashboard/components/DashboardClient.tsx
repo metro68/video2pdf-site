@@ -66,6 +66,7 @@ const CONSOLE = {
   appstore: { name: "App Store Connect", href: "https://appstoreconnect.apple.com/trends" },
   play: { name: "Play Console", href: "https://play.google.com/console" },
   posthog: { name: "PostHog", href: "https://eu.posthog.com" },
+  posthogAi: { name: "PostHog AI observability", href: "https://eu.posthog.com/ai-observability/generations" },
   stripe: { name: "Stripe Dashboard", href: "https://dashboard.stripe.com/subscriptions" },
 } as const;
 
@@ -77,6 +78,7 @@ export default function DashboardClient({ role }: { role: Role }) {
   );
   const [totalDownloads, setTotalDownloads] = useState<MetricResponse | null>(null);
   const [channels, setChannels] = useState<ChannelsResponse | null>(null);
+  const [cost, setCost] = useState<MetricResponse | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,6 +104,21 @@ export default function DashboardClient({ role }: { role: Role }) {
       .catch(() => ({ status: "error", asOf: null, data: null }) as SourcesResponse)
       .then((res) => {
         if (!cancelled) setSources(res);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [month]);
+
+  // Scan model cost follows the month picker like the provider metrics.
+  useEffect(() => {
+    let cancelled = false;
+    setCost(null);
+    fetch(`/api/metrics/cost?month=${month}`)
+      .then((r) => r.json() as Promise<MetricResponse>)
+      .catch(() => ({ status: "error", asOf: null, data: null }) as MetricResponse)
+      .then((res) => {
+        if (!cancelled) setCost(res);
       });
     return () => {
       cancelled = true;
@@ -166,6 +183,10 @@ export default function DashboardClient({ role }: { role: Role }) {
     (num("appstore", "mrr") ?? 0) + (num("play", "mrr") ?? 0) + (num("stripe", "mrr") ?? 0);
   const webFreeTrials = num("stripe", "webFreeTrials");
 
+  const costData = cost?.status === "ok" ? cost.data : null;
+  const modelSpend = typeof costData?.modelSpendUsd === "number" ? costData.modelSpendUsd : undefined;
+  const costPerScan = typeof costData?.costPerScanUsd === "number" ? costData.costPerScanUsd : undefined;
+
   return (
     <main className="min-h-screen bg-brand-bg text-brand-text p-6">
       <div className="mx-auto max-w-6xl space-y-6">
@@ -218,6 +239,18 @@ export default function DashboardClient({ role }: { role: Role }) {
             value={webFreeTrials != null ? webFreeTrials.toLocaleString() : "n/a"}
             description={`Free trials started on the web funnel via Stripe in ${monthLabel}. Each trial is a Stripe subscription that entered its trial period this month.`}
             sources={[CONSOLE.stripe]}
+          />
+          <KpiTile
+            label="Model cost / scan"
+            value={costPerScan != null ? `$${costPerScan.toFixed(4)}` : "n/a"}
+            description={`Judgment-model spend per completed scan in ${monthLabel}, against the $29.99/year price. Total model cost from AI observability divided by completed scans. Shows n/a until the scan server sends $ai_generation cost events; scan volume alone cannot price a scan.`}
+            sources={[CONSOLE.posthogAi]}
+          />
+          <KpiTile
+            label={`Model spend (${monthLabel})`}
+            value={modelSpend != null ? `$${modelSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "n/a"}
+            description={`Total judgment-model cost across all scans in ${monthLabel}, summed from PostHog AI observability ($ai_total_cost_usd per generation). Companion to the cost-per-scan tile above.`}
+            sources={[CONSOLE.posthogAi]}
           />
           {role === "admin" ? (
             <KpiTile
